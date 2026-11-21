@@ -1,0 +1,11 @@
+node_modules
+dist
+.env
+**/.env
+!.env.example
+.postgres/
+pg.log
+*.log
+*.tsbuildinfo
+.prisma
+apps/api/uploads/

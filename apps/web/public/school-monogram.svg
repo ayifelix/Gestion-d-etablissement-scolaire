@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192">
+  <rect width="192" height="192" rx="12" fill="#FBF6EA"/>
+  <path d="M8 8h176v176H8z" fill="none" stroke="#006A4E" stroke-width="8"/>
+  <path d="M8 42h176" stroke="#F2B705" stroke-width="8"/>
+  <text x="96" y="126" fill="#1F3A6E" font-family="Georgia,serif" font-size="54" font-weight="700" text-anchor="middle">GS</text>
+</svg>
