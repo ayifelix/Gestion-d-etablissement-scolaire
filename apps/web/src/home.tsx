@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { API_ORIGIN, api } from "./api";
 import { schoolLogoSource } from "./branding";
+import { CadrePhoto, PhotoViewer, type CadrePhotoItem } from "./cadre-photo";
 import "./home.css";
 
 type SchoolIdentity = {
@@ -12,7 +13,8 @@ type SchoolIdentity = {
   logoUrl: string | null; photoUrl: string | null;
 };
 type PublicAnnouncement = { id: string; title: string; summary: string; category: string; eventAt: string | null };
-type PublicSite = { identity: SchoolIdentity; announcements: PublicAnnouncement[] };
+type PublicGalleryPhoto = { id: string; url: string; lowUrl: string | null; alt: string; label: string; position: string };
+type PublicSite = { identity: SchoolIdentity; announcements: PublicAnnouncement[]; gallery?: PublicGalleryPhoto[] };
 
 type BarcodeDetectorLike = { detect(source: CanvasImageSource): Promise<Array<{ rawValue: string }>> };
 type WindowWithBarcodeDetector = Window & { BarcodeDetector?: new (options: { formats: string[] }) => BarcodeDetectorLike };
@@ -30,6 +32,7 @@ const fallback: SchoolIdentity = {
 };
 
 const schoolPhotos = [
+  { src: "/assets/ecole/IMG_6471-960.webp", low: "/assets/ecole/IMG_6471-480.webp", alt: "Élèves quittant les bâtiments du lycée", label: "Vie scolaire", position: "50% 42%" },
   { src: "/assets/ecole/IMG_6466-960.webp", label: "Vie au lycée" },
   { src: "/assets/ecole/IMG_6467-960.webp", label: "Étude et partage" },
   { src: "/assets/ecole/IMG_6464-960.webp", label: "Laboratoire" },
@@ -49,7 +52,17 @@ const timeline = [
   ["Mai", "Conseils"], ["Juin", "Examens"], ["Juillet", "Bulletins"],
 ];
 
+const filieres = [
+  { id: "S", name: "Scientifique", accent: "marine", icon: "atom", description: "Seconde scientifique, prépare aux séries C et D", subjects: "Mathématiques, sciences physiques, sciences de la vie", levels: "2nde S → 1ère C ou D → Terminale" },
+  { id: "A4", name: "Littéraire", accent: "red", icon: "book", description: "Série littéraire", subjects: "Lettres, langues, histoire-géographie", levels: "2nde A4 → 1ère A4 → Terminale A4" },
+  { id: "C", name: "Scientifique C", accent: "green", icon: "compass", description: "Mathématiques et sciences physiques", subjects: "Mathématiques, physique-chimie", levels: "2nde S → 1ère C → Terminale C" },
+  { id: "D", name: "Scientifique D", accent: "gold", icon: "leaf", description: "Mathématiques et sciences de la vie et de la terre", subjects: "Mathématiques, sciences de la vie et de la Terre", levels: "2nde S → 1ère D → Terminale D" },
+] as const;
+
 function Icon({ name }: { name: string }) {
+  if (name === "atom") return <svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="12" rx="9" ry="3.5" /><ellipse cx="12" cy="12" rx="9" ry="3.5" transform="rotate(60 12 12)" /><ellipse cx="12" cy="12" rx="9" ry="3.5" transform="rotate(120 12 12)" /><circle cx="12" cy="12" r="1.5" /></svg>;
+  if (name === "compass") return <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M9 15 12 5l3 10-3 4-3-4Z" /></svg>;
+  if (name === "leaf") return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4C10 4 5 8 5 14c0 3 2 5 5 5 6 0 10-5 10-15Z" /><path d="M5 20c3-5 7-8 12-11" /></svg>;
   if (name === "person") return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4.5 21c.6-4.1 3-6.2 7.5-6.2s6.9 2.1 7.5 6.2" /></svg>;
   if (name === "book") return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 5.5c3.5-1.1 6.2-.5 8.5 1.5v13c-2.3-2-5-2.6-8.5-1.5v-13ZM20.5 5.5c-3.5-1.1-6.2-.5-8.5 1.5v13c2.3-2 5-2.6 8.5-1.5v-13Z" /></svg>;
   if (name === "grid") return <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /></svg>;
@@ -72,6 +85,9 @@ function phoneLogoUrl(value: string | null) {
 export function HomePage({ onLogin }: { onLogin: () => void }) {
   const [site, setSite] = useState<PublicSite | null>(() => readCache());
   const [profile, setProfile] = useState(0);
+  const [viewerIndex, setViewerIndex] = useState<number | null>(null);
+  const photoTriggerRef = useRef<HTMLElement | null>(null);
+  const [selectedTrack, setSelectedTrack] = useState("S");
   const [parentStep, setParentStep] = useState(0);
   const [verifyCode, setVerifyCode] = useState("");
   const [verifyResult, setVerifyResult] = useState("");
@@ -215,7 +231,7 @@ export function HomePage({ onLogin }: { onLogin: () => void }) {
         </div>
         <div className="hero-visual" data-reveal>
           <div className="weave-lines" aria-hidden="true"><span /><span /><span /></div>
-          <img className="hero-photo" src="/assets/ecole/IMG_6466-960.webp" alt="Élèves du Lycée Akonda Gnaweme en discussion autour de leurs travaux" width="960" height="640" fetchPriority="high" />
+          <img className="hero-photo" src="/assets/ecole/IMG_6471-960.webp" alt="Élèves quittant les bâtiments du lycée" width="960" height="640" fetchPriority="high" />
           <div className="hero-seal"><img src={logo} alt="" /><span>SPÉCIMEN</span></div>
         </div>
       </section>
@@ -288,11 +304,112 @@ export function HomePage({ onLogin }: { onLogin: () => void }) {
 
       <section className="institution-section" id="presentation">
         <div className="head-message" data-reveal><p className="eyebrow">Le mot de la direction</p><h2>{identity.headName ? `Mot de ${identity.headName}` : "Un établissement engagé"}</h2><blockquote>{identity.headMessage || "Bienvenue à toutes les familles et à toute la communauté éducative. Ensemble, donnons à chaque élève les moyens d’apprendre, de grandir et de réussir."}</blockquote></div>
+
+        {(() => {
+          const dynamicGallery: CadrePhotoItem[] = site?.gallery?.length
+            ? site.gallery.map((photo) => ({
+                src: photo.url.replace(/\\/g, ""),
+                lowSrc: photo.lowUrl || photo.url,
+                alt: photo.alt,
+                label: photo.label,
+                position: photo.position,
+              }))
+            : [
+                { src: "/assets/ecole/IMG_6471-960.webp", lowSrc: "/assets/ecole/IMG_6471-480.webp", alt: "Élèves quittant les bâtiments du lycée", label: "Vie scolaire", position: "50% 42%" },
+                { src: "/assets/ecole/IMG_6466-960.webp", lowSrc: "/assets/ecole/IMG_6466-480.webp", alt: "Vie quotidienne des élèves", label: "Vie au lycée", position: "50% 50%" },
+                { src: "/assets/ecole/IMG_6467-960.webp", lowSrc: "/assets/ecole/IMG_6467-480.webp", alt: "Élèves en échange et étude", label: "Étude et partage", position: "50% 50%" },
+                { src: "/assets/ecole/IMG_6464-960.webp", lowSrc: "/assets/ecole/IMG_6464-480.webp", alt: "Activité pédagogique au laboratoire", label: "Laboratoire", position: "50% 50%" },
+                { src: "/assets/ecole/IMG_6458-960.webp", lowSrc: "/assets/ecole/IMG_6458-480.webp", alt: "Accueil du secrétariat", label: "Secrétariat", position: "50% 50%" },
+              ];
+          const galleryItems = dynamicGallery.slice(0, 5);
+          return (
+            <>
+              <div className={`photo-gallery photo-gallery-count-${galleryItems.length}`} data-reveal>
+                {galleryItems.map((item, index) => (
+                  <div key={`${item.src}-${index}`} className={index === 0 ? "gallery-main" : index === 4 ? "gallery-text" : `gallery-${index}`}>
+                    {index === 4
+                      ? <div className="gallery-motto"><span>Akonda</span><strong>{identity.schoolMotto}</strong><p>Un parcours encadré, vérifié et proche des familles.</p></div>
+                      : <CadrePhoto item={item} index={index} main={index === 0} onOpen={(selected) => { photoTriggerRef.current = document.activeElement as HTMLElement; setViewerIndex(selected); }} />}
+                  </div>
+                ))}
+                {galleryItems.length === 0 && <p className="gallery-empty">Les photos de l’établissement seront publiées ici.</p>}
+              </div>
+              {galleryItems.length > 1 && (
+                <div className="gallery-mobile-nav" aria-label="Indicateurs de la galerie">
+                  {galleryItems.map((item, index) => <button key={item.src} type="button" aria-label={`Afficher ${item.label}`} onClick={() => setViewerIndex(index)}><span /></button>)}
+                </div>
+              )}
+              {viewerIndex !== null && (
+                <PhotoViewer
+                  items={galleryItems}
+                  index={Math.min(viewerIndex, galleryItems.length - 1)}
+                  onClose={() => {
+                    setViewerIndex(null);
+                    window.requestAnimationFrame(() => photoTriggerRef.current?.focus());
+                  }}
+                  onChange={setViewerIndex}
+                />
+              )}
+            </>
+          );
+        })()}
+
         <div className="cycle-panels" data-reveal>
-          <article className="college-panel"><p>COLLÈGE · CYCLE 4</p><h3>Construire les bases</h3><span>Niveaux du collège</span><b>Collège</b></article>
-          <article className="lycee-panel"><p>LYCÉE · ORIENTATION</p><h3>Approfondir et choisir</h3><span>Filières académiques</span><div>{["S", "A4", "C", "D"].map((item) => <b key={item} title={{ S: "Scientifique", A4: "Arts & lettres", C: "Scientifique", D: "Scientifique" }[item]}>{item}</b>)}</div></article>
+          <article className="college-panel">
+            <p>COLLÈGE · CYCLE 4</p><h3>Construire les bases</h3>
+            <div className="college-track" aria-label="Niveaux du collège">
+              <span className="college-line" aria-hidden="true" />
+              {["6e", "5e", "4e", "3e"].map((level, index) => <span className="college-level" key={level}><i>{level}</i></span>)}
+              <strong className="bepc-badge">BEPC</strong>
+            </div>
+          </article>
+          <article className="lycee-panel">
+            <p>LYCÉE · ORIENTATION</p><h3>Approfondir et choisir</h3>
+            <div className="filiere-grid" role="group" aria-label="Filières du lycée">
+              {filieres.map((filiere) => (
+                <button
+                  key={filiere.id}
+                  type="button"
+                  className={`filiere-tile accent-${filiere.accent}${selectedTrack === filiere.id ? " is-selected" : ""}`}
+                  aria-pressed={selectedTrack === filiere.id}
+                  onClick={() => setSelectedTrack(filiere.id)}
+                  onKeyDown={(event) => {
+                    if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) return;
+                    event.preventDefault();
+                    const index = filieres.findIndex((item) => item.id === filiere.id);
+                    const delta = event.key === "ArrowRight" || event.key === "ArrowDown" ? 1 : -1;
+                    const next = (index + delta + filieres.length) % filieres.length;
+                    setSelectedTrack(filieres[next].id);
+                    const buttons = event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>("button");
+                    buttons?.[next]?.focus();
+                  }}
+                >
+                  <Icon name={filiere.icon} /><strong>{filiere.id}</strong><span>{filiere.name}</span>
+                </button>
+              ))}
+            </div>
+            {filieres.map((filiere) => filiere.id === selectedTrack && (
+              <div className="filiere-detail" role="status" key={filiere.id}>
+                <strong>{filiere.description}</strong>
+                <p><b>Matières principales</b> · {filiere.subjects}</p>
+                <p><b>Niveaux concernés</b> · {filiere.levels}</p>
+              </div>
+            ))}
+          </article>
         </div>
-        <div className="gallery" data-reveal>{schoolPhotos.map((photo, index) => <figure className={index === 0 ? "feature" : ""} key={photo.src}><img src={photo.src} alt={photo.label} loading="lazy" /><figcaption>{photo.label}</figcaption></figure>)}</div>
+
+        <div className="pathway-section" data-reveal>
+          <p className="eyebrow">Schéma de parcours</p>
+          <div className="pathway-track">
+            <div className={selectedTrack === "S" || selectedTrack === "C" || selectedTrack === "D" ? "pathway-row is-active" : "pathway-row"}>
+              <strong>Parcours scientifique</strong><div><span>2nde S</span><i /><span>1ère C ou D</span><i /><span>Terminale</span></div>
+            </div>
+            <div className={selectedTrack === "A4" ? "pathway-row is-active" : "pathway-row"}>
+              <strong>Parcours littéraire</strong><div><span>2nde A4</span><i /><span>1ère A4</span><i /><span>Terminale A4</span></div>
+            </div>
+          </div>
+          <p className="orientation-note">Orientation décidée en conseil de classe après les vœux des familles</p>
+        </div>
       </section>
 
       <section className="faq-section" id="aide">

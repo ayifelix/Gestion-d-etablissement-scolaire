@@ -213,6 +213,20 @@ model SchoolIdentity {
   versions            SchoolIdentityVersion[]
 }
 
+model SchoolGalleryPhoto {
+  id        String   @id @default(uuid())
+  url       String
+  lowUrl    String?
+  alt       String
+  label     String
+  position  String   @default("50% 50%")
+  order     Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@index([active, order])
+}
+
 model SchoolIdentityVersion {
   id               String         @id @default(uuid())
   schoolIdentityId String

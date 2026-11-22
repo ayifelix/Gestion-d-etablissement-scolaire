@@ -181,7 +181,7 @@ export function createSiteRouter(deps: SiteDependencies) {
   }
 
   router.get("/public/site", async (_req, res) => {
-    const [identity, announcements] = await Promise.all([
+    const [identity, announcements, gallery] = await Promise.all([
       getIdentity(),
       prisma.publicAnnouncement.findMany({
         where: {
@@ -193,6 +193,11 @@ export function createSiteRouter(deps: SiteDependencies) {
         take: 12,
         select: { id: true, title: true, summary: true, category: true, eventAt: true },
       }),
+      (prisma as PrismaClient & { schoolGalleryPhoto?: { findMany: (args: unknown) => Promise<Array<{ id: string; url: string; lowUrl: string | null; alt: string; label: string; position: string }>> } }).schoolGalleryPhoto?.findMany({
+        where: { active: true },
+        orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+        select: { id: true, url: true, lowUrl: true, alt: true, label: true, position: true },
+      }) ?? [],
     ]);
     if (!identity) return res.status(503).json({ error: "Identité de l'établissement non initialisée" });
     res.setHeader("Cache-Control", "no-store");
@@ -221,6 +226,7 @@ export function createSiteRouter(deps: SiteDependencies) {
         photoUrl: identity.photoUrl,
       },
       announcements,
+      gallery,
     });
   });
 
@@ -264,15 +270,18 @@ export function createSiteRouter(deps: SiteDependencies) {
   });
 
   router.get("/site-content", authenticate, manageContent, async (_req, res) => {
-    const [identity, announcements] = await Promise.all([
+    const [identity, announcements, gallery] = await Promise.all([
       getIdentity(),
       prisma.publicAnnouncement.findMany({
         where: { archivedAt: null },
         orderBy: [{ eventAt: "asc" }, { createdAt: "desc" }],
       }),
+      (prisma as PrismaClient & { schoolGalleryPhoto?: { findMany: (args: unknown) => Promise<unknown[]> } }).schoolGalleryPhoto?.findMany({
+        orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+      }) ?? [],
     ]);
     if (!identity) return res.status(503).json({ error: "Identité de l'établissement non initialisée" });
-    res.json({ identity, announcements });
+    res.json({ identity, announcements, gallery });
   });
 
   router.get("/school-identity", authenticate, manageIdentity, async (_req, res) => {
@@ -443,7 +452,7 @@ export function createSiteRouter(deps: SiteDependencies) {
     async (req, res) => {
       const file = req.file;
       const kind = req.body.kind;
-      if (!file || kind !== "photo") {
+      if (!file || !["photo", "gallery"].includes(kind)) {
         return res.status(400).json({ error: "Une photo d'établissement est requise" });
       }
       const extension = imageExtension(file);
@@ -451,8 +460,31 @@ export function createSiteRouter(deps: SiteDependencies) {
       const filename = `${randomUUID()}${extension}`;
       await mkdir(mediaDirectory, { recursive: true });
       await writeFile(path.join(mediaDirectory, filename), file.buffer, { flag: "wx" });
-      const field = "photoUrl";
       const url = `/api/public/media/${filename}`;
+      if (kind === "gallery") {
+        const userId = currentAuth(req).sub;
+        const galleryCount = await prisma.schoolGalleryPhoto.count();
+        const photo = await prisma.schoolGalleryPhoto.create({
+          data: {
+            url,
+            lowUrl: url,
+            alt: "Vue de l'établissement",
+            label: "Vie scolaire",
+            position: "50% 50%",
+            order: galleryCount,
+          },
+        });
+        await writeAudit({
+          userId,
+          action: "SITE_GALLERY_PHOTO_CREATE",
+          entityType: "SCHOOL_GALLERY_PHOTO",
+          entityId: photo.id,
+          newValue: photo,
+          req,
+        });
+        return res.status(201).json({ kind, url, photo });
+      }
+      const field = "photoUrl";
       const userId = currentAuth(req).sub;
       const previous = await getIdentity();
       const identity = await prisma.schoolIdentity.upsert({
@@ -472,6 +504,46 @@ export function createSiteRouter(deps: SiteDependencies) {
       res.status(201).json({ kind, url });
     },
   );
+
+  router.put("/site-content/gallery/:id", authenticate, manageContent, async (req, res) => {
+    const parsed = z.object({
+      label: z.string().trim().min(2).max(120).optional(),
+      alt: z.string().trim().min(2).max(240).optional(),
+      position: z.string().trim().regex(/^(?:left|center|right|\d+(?:\.\d+)?)%\s+(?:top|center|bottom|\d+(?:\.\d+)?)%$/, "Point focal invalide").optional(),
+      active: z.boolean().optional(),
+      order: z.number().int().min(0).optional(),
+    }).safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: z.prettifyError(parsed.error) });
+    const previous = await prisma.schoolGalleryPhoto.findUnique({ where: { id: String(req.params.id) } });
+    if (!previous) return res.status(404).json({ error: "Photo introuvable" });
+    const photo = await prisma.schoolGalleryPhoto.update({ where: { id: previous.id }, data: parsed.data });
+    await writeAudit({
+      userId: currentAuth(req).sub,
+      action: "SITE_GALLERY_PHOTO_UPDATE",
+      entityType: "SCHOOL_GALLERY_PHOTO",
+      entityId: photo.id,
+      oldValue: previous,
+      newValue: photo,
+      req,
+    });
+    res.json(photo);
+  });
+
+  router.delete("/site-content/gallery/:id", authenticate, manageContent, async (req, res) => {
+    const photo = await prisma.schoolGalleryPhoto.findUnique({ where: { id: String(req.params.id) } });
+    if (!photo) return res.status(404).json({ error: "Photo introuvable" });
+    await prisma.schoolGalleryPhoto.update({ where: { id: photo.id }, data: { active: false } });
+    await writeAudit({
+      userId: currentAuth(req).sub,
+      action: "SITE_GALLERY_PHOTO_ARCHIVE",
+      entityType: "SCHOOL_GALLERY_PHOTO",
+      entityId: photo.id,
+      oldValue: photo,
+      newValue: { ...photo, active: false },
+      req,
+    });
+    res.status(204).end();
+  });
 
   router.post(
     "/school-identity/logo",

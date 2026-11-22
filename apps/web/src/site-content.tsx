@@ -45,7 +45,8 @@ type Announcement = {
   eventAt: string | null;
   published: boolean;
 };
-type SiteContentResponse = { identity: SchoolIdentity; announcements: Announcement[] };
+type SiteContentResponse = { identity: SchoolIdentity; announcements: Announcement[]; gallery?: GalleryPhoto[] };
+type GalleryPhoto = { id: string; url: string; lowUrl: string | null; alt: string; label: string; position: string; active: boolean };
 type IdentityVersion = { id: string; version: number; createdAt: string; createdBy: string };
 
 const blankAnnouncement = {
@@ -99,6 +100,7 @@ function localDateTime(value: string | null) {
 export function SiteContentWorkspace({ mode = "content" }: { mode?: "content" | "identity" }) {
   const [identity, setIdentity] = useState<SchoolIdentity | null>(null);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [gallery, setGallery] = useState<GalleryPhoto[]>([]);
   const [versions, setVersions] = useState<IdentityVersion[]>([]);
   const [announcement, setAnnouncement] = useState({ ...blankAnnouncement });
   const [editingId, setEditingId] = useState("");
@@ -120,6 +122,7 @@ export function SiteContentWorkspace({ mode = "content" }: { mode?: "content" | 
         const result = await api<SiteContentResponse>("/site-content");
         setIdentity(result.identity);
         setAnnouncements(result.announcements);
+        setGallery(result.gallery ?? []);
       }
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Le contenu de l'accueil est indisponible.");
@@ -151,7 +154,7 @@ export function SiteContentWorkspace({ mode = "content" }: { mode?: "content" | 
     }
   };
 
-  const uploadMedia = async (kind: "logo" | "photo", file?: File) => {
+  const uploadMedia = async (kind: "logo" | "photo" | "gallery", file?: File) => {
     if (!file) return;
     setBusy(true);
     setError("");
@@ -160,15 +163,20 @@ export function SiteContentWorkspace({ mode = "content" }: { mode?: "content" | 
       const body = new FormData();
       body.append("kind", kind);
       body.append("image", file);
-      const endpoint = kind === "logo" ? "/school-identity/logo" : "/site-content/media";
-      const result = await api<{ url: string; version?: number; logoVersionId?: string }>(endpoint, { method: "POST", body });
-      setIdentity((current) => current
-        ? {
-            ...current,
-            [kind === "logo" ? "logoUrl" : "photoUrl"]: result.url,
-            ...(kind === "logo" ? { version: result.version ?? current.version, logoVersionId: result.logoVersionId ?? null } : {}),
-          }
-        : current);
+      const endpoint = kind === "logo"
+        ? "/school-identity/logo"
+        : "/site-content/media";
+      const result = await api<{ url: string; version?: number; logoVersionId?: string; photo?: GalleryPhoto }>(endpoint, { method: "POST", body });
+      if (kind === "gallery" && result.photo) setGallery((current) => [...current, result.photo as GalleryPhoto]);
+      if (kind !== "gallery") {
+        setIdentity((current) => current
+          ? {
+              ...current,
+              [kind === "logo" ? "logoUrl" : "photoUrl"]: result.url,
+              ...(kind === "logo" ? { version: result.version ?? current.version, logoVersionId: result.logoVersionId ?? null } : {}),
+            }
+          : current);
+      }
       if (kind === "logo") setVersions(await api<IdentityVersion[]>("/school-identity/versions"));
       setNotice("Image enregistrée et modification journalisée.");
     } catch (reason) {
@@ -318,7 +326,32 @@ export function SiteContentWorkspace({ mode = "content" }: { mode?: "content" | 
                 {identity.photoUrl && <img src={mediaUrl(identity.photoUrl)} alt="Photo actuelle de l'établissement" />}
                 <input type="file" accept="image/png,image/jpeg,image/webp" disabled={busy} onChange={(event) => void uploadMedia("photo", event.target.files?.[0])} />
               </label>
+              <label>Ajouter une photo à la galerie
+                <input type="file" accept="image/png,image/jpeg,image/webp" disabled={busy} onChange={(event) => void uploadMedia("gallery", event.target.files?.[0])} />
+              </label>
             </div>
+            {gallery.length > 0 && (
+              <div className="site-gallery-admin">
+                {gallery.filter((photo) => photo.active).map((photo) => (
+                  <article key={photo.id}>
+                    <img src={photo.url} alt={photo.alt} />
+                    <label>Légende<input value={photo.label} onChange={(event) => setGallery((current) => current.map((item) => item.id === photo.id ? { ...item, label: event.target.value } : item))} /></label>
+                    <label>Point focal<input value={photo.position} onChange={(event) => setGallery((current) => current.map((item) => item.id === photo.id ? { ...item, position: event.target.value } : item))} /></label>
+                    <div className="actions">
+                      <button type="button" className="secondary" onClick={async () => {
+                        await api(`/site-content/gallery/${photo.id}`, { method: "PUT", body: JSON.stringify({ label: photo.label, position: photo.position }) });
+                        setNotice("Photo de galerie mise à jour.");
+                      }}>Enregistrer</button>
+                      <button type="button" className="danger-button" onClick={async () => {
+                        await api(`/site-content/gallery/${photo.id}`, { method: "DELETE" });
+                        setGallery((current) => current.filter((item) => item.id !== photo.id));
+                        setNotice("Photo retirée de la galerie.");
+                      }}>Retirer</button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
             <form className="announcement-editor" onSubmit={(event) => void saveAnnouncement(event)}>
             <h3>{editingId ? "Modifier une annonce ou une date" : "Ajouter une annonce ou une date"}</h3>
             <p className="help wide-field">Ces informations sont publiques. Ne publiez aucun nom, matricule, résultat individuel, téléphone personnel ni autre donnée privée.</p>
