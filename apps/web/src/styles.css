@@ -2,10 +2,11 @@
   font-family: "Atkinson Hyperlegible", "Segoe UI", sans-serif;
   color: #1c1b18;
   background: #fbf6ea;
-  --forest: #006a4e;
-  --ochre: #f2b705;
-  --clay: #c0392b;
-  --indigo: #1f3a6e;
+  --forest: #011e61;
+  --ochre: #fabc05;
+  --clay: #b20202;
+  --indigo: #011e61;
+  --school-green: #157336;
   --paper: #fbf6ea;
   --sand: #f1e8d2;
   --ink: #1c1b18;
@@ -15,7 +16,7 @@
 body { margin: 0; }
 button, input { font: inherit; }
 .login-page { min-height: 100vh; display: flex; flex-direction: column; background: var(--paper); }
-.login-header { min-height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px max(16px, calc((100% - 1040px) / 2)); border-bottom: 1px solid var(--line); background: var(--paper); }
+.login-header { min-height: 100px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px max(16px, calc((100% - 1040px) / 2)); border-bottom: 1px solid var(--line); background: var(--paper); }
 .login-header > a:last-child { color: var(--forest); font-weight: 800; }
 .login-panel { width: min(480px, calc(100% - 32px)); margin: auto; padding: clamp(22px, 6vw, 40px); border: 1px solid var(--line); border-top: 6px solid var(--forest); background: #fffdf7; }
 .login-panel h1 { margin: 8px 0 10px; color: var(--indigo); font-family: Georgia, serif; font-size: clamp(28px, 7vw, 38px); }
@@ -59,10 +60,11 @@ button:disabled { opacity: .6; cursor: wait; }
 .shell { min-height: 100vh; display: grid; grid-template-columns: 240px 1fr; }
 aside { background: var(--forest); color: #fffdf7; padding: 24px 16px; display: flex; flex-direction: column; border-right: 5px solid var(--ochre); }
 .logo { width: 44px; height: 44px; border: 2px solid var(--ochre); color: var(--ochre); display: grid; place-items: center; font-weight: 800; }
+.logo img { width: 100%; height: 100%; padding: 2px; background: var(--paper); object-fit: contain; }
 aside h2 { font-size: 16px; margin: 12px 8px 30px; }
 nav { display: grid; gap: 6px; }
 nav button { border: 0; border-left: 3px solid transparent; background: transparent; color: #f0eadc; text-align: left; padding: 12px; cursor: pointer; text-transform: capitalize; }
-nav button.active { background: #174f3e; border-left-color: var(--ochre); color: white; }
+nav button.active { background: #09285f; border-left-color: var(--ochre); color: white; }
 .logout { margin-top: auto; border: 1px solid #b5c8bb; color: white; background: transparent; padding: 10px; cursor: pointer; }
 .shell main { min-width: 0; }
 header { height: 88px; background: #fffdf7; border-bottom: 1px solid var(--line); border-top: 4px solid var(--ochre); display: flex; align-items: center; justify-content: space-between; padding: 0 34px; }
@@ -150,10 +152,38 @@ h2 small { background: #e8eaf0; color: var(--indigo); border-radius: 20px; paddi
 .app-footer { grid-column: 2; padding: 14px 34px; border-top: 1px solid var(--line); background: var(--sand); color: #38352e; font-size: 12px; }
 .printable-document { display: none; }
 .document-identity { display: flex; align-items: center; gap: 16px; height: auto; border: 0; border-top: 4px solid var(--forest); padding: 12px 0; background: transparent; }
-.document-identity img { max-width: 76px; max-height: 76px; object-fit: contain; }
+.document-identity > img { max-width: 76px; max-height: 76px; object-fit: contain; }
 .document-identity div { display: grid; gap: 4px; }
 .document-identity strong { color: var(--forest); font-size: 18px; }
 .document-identity span { color: #38352e; font-size: 11px; }
+.official-letterhead { display: grid; grid-template-columns: minmax(0, 1fr) 68px minmax(0, 1fr); align-items: start; gap: 12px; border-top: 0; border-bottom: 2px solid var(--forest); padding: 8px 0 12px; }
+.official-letterhead-left, .official-letterhead-right { display: grid; align-content: start; gap: 3px; }
+.official-letterhead-left strong, .official-letterhead-right strong { color: var(--forest); font-size: 11px; line-height: 1.25; }
+.official-letterhead-left span, .official-letterhead-right span { color: #38352e; font-size: 10px; }
+.official-letterhead-left .official-school-logo { width: auto; max-width: 160px; height: 16mm; margin-top: 3px; padding: 3px; background: #fbf6ea; object-fit: contain; }
+.official-letterhead-right { text-align: right; }
+.reduced-letterhead { justify-content: flex-start; border-bottom: 1px solid var(--line); }
+.reduced-letterhead > img { width: auto; max-width: 90px; max-height: 60px; padding: 3px; background: var(--paper); object-fit: contain; }
+.reduced-letterhead > strong { color: var(--forest); font-size: 15px; }
+.togo-arms { display: block; width: auto; max-width: 100%; background: #fbf6ea; object-fit: contain; }
+.togo-arms-screen { height: 40px; }
+.togo-arms-large { height: 18mm; min-height: 68px; justify-self: center; }
+.togo-arms-small { height: 12mm; min-height: 45px; justify-self: center; }
+.official-document-meta { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 15px 0; }
+.official-document-meta > div:first-child { display: grid; gap: 4px; }
+.official-document-meta h1 { margin: 0; color: var(--indigo); font-family: Georgia, serif; }
+.official-document-meta > div > span { color: #38352e; font-size: 11px; }
+.official-document-qr { width: 68px; height: 68px; object-fit: contain; }
+.document-signatures { min-height: 95px; margin-top: 28px; padding-top: 12px; border-top: 1px solid #777; }
+.document-signatures span { display: block; margin-top: 30px; text-align: right; }
+.printable-document { position: relative; }
+.specimen-watermark { position: absolute; z-index: 1; top: 43%; left: 8%; width: 84%; transform: rotate(-24deg); border: 5px solid var(--clay); padding: 9px; color: var(--clay); background: #fbf6ea66; font-size: clamp(24px, 5vw, 48px); font-weight: 900; letter-spacing: .04em; text-align: center; pointer-events: none; }
+.identity-preview-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 12px 0 24px; }
+.identity-preview { min-height: 120px; display: grid; justify-items: center; align-content: center; gap: 7px; border: 1px solid var(--line); padding: 10px; background: #fffdf7; text-align: center; }
+.identity-preview > span { color: #514d43; font-size: 11px; font-weight: 800; }
+.identity-preview img { width: 72px; height: 55px; padding: 2px; background: var(--paper); object-fit: contain; }
+.identity-preview strong { color: var(--forest); font-size: 12px; }
+.identity-history article { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; border-top: 1px solid var(--line); padding: 10px 0; }
 .printable-document h1 { margin: 22px 0 12px; color: var(--indigo); font-family: Georgia, serif; }
 .printable-document table { width: 100%; margin-top: 18px; border-collapse: collapse; }
 .printable-document th, .printable-document td { border: 1px solid #777; padding: 7px; text-align: left; }
@@ -161,6 +191,11 @@ h2 small { background: #e8eaf0; color: var(--indigo); border-radius: 20px; paddi
 .document-signatures { display: flex; justify-content: space-between; gap: 28px; margin-top: 45px; }
 .document-signatures span { min-width: 180px; border-top: 1px solid #555; padding-top: 7px; }
 .printable-document > footer { margin-top: 30px; border-top: 2px solid var(--forest); padding-top: 9px; color: var(--forest); font-weight: 800; text-align: center; }
+.official-print { min-height: 245mm; border: 1px solid #c9c1b2; padding: 16mm; }
+.official-document-number, .official-issue-date { color: #38352e; font-size: 10px; text-align: right; }
+.official-qr { display: flex; align-items: center; gap: 12px; margin-top: 20px; font-size: 9px; }
+.official-qr img { width: 110px; height: 110px; image-rendering: pixelated; }
+.official-revoked { color: #c0392b; font-size: 18px; font-weight: 800; text-align: center; }
 @page { size: A4; margin: 14mm; }
 @media print {
   body * { visibility: hidden !important; }
@@ -169,6 +204,22 @@ h2 small { background: #e8eaf0; color: var(--indigo); border-radius: 20px; paddi
   .document-identity { border-color: #006a4e; }
   .document-identity strong, .printable-document h1, .printable-document > footer { color: #006a4e; }
   .printable-document th { background: #f1e8d2 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+@media (max-width: 560px) {
+  .official-letterhead { grid-template-columns: 1fr 48px 1fr; gap: 6px; }
+  .official-letterhead-left strong, .official-letterhead-right strong { font-size: 9px; }
+  .official-letterhead-left span, .official-letterhead-right span { font-size: 8px; }
+  .official-letterhead-left .official-school-logo { height: 14mm; max-width: 100%; }
+  .togo-arms-large { min-height: 52px; height: 14mm; }
+}
+@media (prefers-color-scheme: dark) {
+  :root { color-scheme: dark; --paper: #171b24; --sand: #242a35; --ink: #f8f4e9; --line: #4a5362; color: var(--ink); background: var(--paper); }
+  body, .login-page, .shell main, .page-content { background: var(--paper); color: var(--ink); }
+  header, .login-header, .login-panel, .table, .cards article, .empty, .assessment-list button, .report-list article, .class-list article, .identity-preview { background: #202630; color: var(--ink); }
+  .login-panel > p:not(.public-eyebrow), .forgot-password p, .login-help, header span, .paper-id, .help { color: #d3d8e0; }
+  input, select, textarea { background: #171b24 !important; color: var(--ink) !important; border-color: #687386 !important; }
+  .app-footer { background: #242a35; color: var(--ink); }
+  .school-logo, .official-school-logo, .reduced-letterhead > img, .togo-arms { background: #fbf6ea; }
 }
 @media (prefers-reduced-motion: no-preference) {
   button { transition: background-color 180ms ease, transform 180ms ease; }

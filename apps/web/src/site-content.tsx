@@ -1,12 +1,16 @@
 import { useEffect, useState } from "react";
 import { API_ORIGIN, api } from "./api";
+import { schoolLogoSource } from "./branding";
 
 type SchoolIdentity = {
   schoolName: string;
+  shortName: string;
+  monogram: string;
   cycleSubtitle: string;
   ministry: string;
   regionalDirectorate: string;
   inspection: string;
+  republicName: string;
   republicMotto: string;
   schoolMotto: string;
   address: string;
@@ -19,7 +23,9 @@ type SchoolIdentity = {
   lyceePresentation: string;
   directionsUrl: string;
   logoUrl: string | null;
+  compactLogoUrl: string | null;
   photoUrl: string | null;
+  version: number;
 };
 
 type AnnouncementCategory =
@@ -40,6 +46,7 @@ type Announcement = {
   published: boolean;
 };
 type SiteContentResponse = { identity: SchoolIdentity; announcements: Announcement[] };
+type IdentityVersion = { id: string; version: number; createdAt: string; createdBy: string };
 
 const blankAnnouncement = {
   title: "",
@@ -51,10 +58,13 @@ const blankAnnouncement = {
 
 const identityFields: Array<{ key: keyof SchoolIdentity; label: string; multiline?: boolean }> = [
   { key: "schoolName", label: "Nom officiel de l'établissement" },
+  { key: "shortName", label: "Nom court" },
+  { key: "monogram", label: "Sigle / monogramme" },
   { key: "cycleSubtitle", label: "Libellé des cycles" },
   { key: "ministry", label: "Ministère" },
   { key: "regionalDirectorate", label: "Direction régionale" },
   { key: "inspection", label: "Inspection" },
+  { key: "republicName", label: "Nom de la République" },
   { key: "republicMotto", label: "Devise de la République" },
   { key: "schoolMotto", label: "Devise de l'établissement" },
   { key: "address", label: "Adresse" },
@@ -86,9 +96,10 @@ function localDateTime(value: string | null) {
   return local.toISOString().slice(0, 16);
 }
 
-export function SiteContentWorkspace() {
+export function SiteContentWorkspace({ mode = "content" }: { mode?: "content" | "identity" }) {
   const [identity, setIdentity] = useState<SchoolIdentity | null>(null);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [versions, setVersions] = useState<IdentityVersion[]>([]);
   const [announcement, setAnnouncement] = useState({ ...blankAnnouncement });
   const [editingId, setEditingId] = useState("");
   const [error, setError] = useState("");
@@ -98,15 +109,24 @@ export function SiteContentWorkspace() {
   const refresh = async () => {
     setError("");
     try {
-      const result = await api<SiteContentResponse>("/site-content");
-      setIdentity(result.identity);
-      setAnnouncements(result.announcements);
+      if (mode === "identity") {
+        const [current, history] = await Promise.all([
+          api<SchoolIdentity>("/school-identity"),
+          api<IdentityVersion[]>("/school-identity/versions"),
+        ]);
+        setIdentity(current);
+        setVersions(history);
+      } else {
+        const result = await api<SiteContentResponse>("/site-content");
+        setIdentity(result.identity);
+        setAnnouncements(result.announcements);
+      }
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Le contenu de l'accueil est indisponible.");
     }
   };
 
-  useEffect(() => { void refresh(); }, []);
+  useEffect(() => { void refresh(); }, [mode]);
 
   const saveIdentity = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -122,6 +142,7 @@ export function SiteContentWorkspace() {
         )),
       });
       setIdentity(saved);
+      setVersions(await api<IdentityVersion[]>("/school-identity/versions"));
       setNotice("Identité enregistrée et modification journalisée.");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Enregistrement impossible.");
@@ -139,10 +160,16 @@ export function SiteContentWorkspace() {
       const body = new FormData();
       body.append("kind", kind);
       body.append("image", file);
-      const result = await api<{ url: string }>("/site-content/media", { method: "POST", body });
+      const endpoint = kind === "logo" ? "/school-identity/logo" : "/site-content/media";
+      const result = await api<{ url: string; version?: number; logoVersionId?: string }>(endpoint, { method: "POST", body });
       setIdentity((current) => current
-        ? { ...current, [kind === "logo" ? "logoUrl" : "photoUrl"]: result.url }
+        ? {
+            ...current,
+            [kind === "logo" ? "logoUrl" : "photoUrl"]: result.url,
+            ...(kind === "logo" ? { version: result.version ?? current.version, logoVersionId: result.logoVersionId ?? null } : {}),
+          }
         : current);
+      if (kind === "logo") setVersions(await api<IdentityVersion[]>("/school-identity/versions"));
       setNotice("Image enregistrée et modification journalisée.");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Téléversement impossible.");
@@ -205,20 +232,40 @@ export function SiteContentWorkspace() {
     }
   };
 
+  const restoreVersion = async (version: IdentityVersion) => {
+    if (!window.confirm(`Restaurer la version ${version.version} de l'identité ?`)) return;
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      const restored = await api<SchoolIdentity>(`/school-identity/versions/${version.id}/restore`, { method: "POST" });
+      setIdentity(restored);
+      setVersions(await api<IdentityVersion[]>("/school-identity/versions"));
+      setNotice(`Version ${version.version} restaurée et journalisée.`);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Restauration impossible.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const mediaUrl = (value: string | null) =>
-    value && /^\/api\/public\/media\/[0-9a-f-]{36}\.(png|jpg|webp)$/.test(value) ? `${API_ORIGIN}${value}` : "";
+    value && /^\/api\/public\/media\/[0-9a-f-]{36}(?:-original|-(?:64|128|256|512|1024))?\.(png|jpg|webp)$/.test(value)
+      ? `${API_ORIGIN}${value}`
+      : "";
+  const logo = schoolLogoSource(identity?.logoUrl);
 
   return (
     <section className="site-content-workspace">
-      <p className="eyebrow">Permission site.gerer_contenu</p>
-      <h2>Contenu de l'accueil</h2>
+      <p className="eyebrow">{mode === "identity" ? "Permission etablissement.gerer_identite" : "Permission site.gerer_contenu"}</p>
+      <h2>{mode === "identity" ? "Identité de l'établissement" : "Contenu de l'accueil"}</h2>
       {error && <div className="alert" role="alert">{error}</div>}
       {notice && <div className="notice" role="status">{notice}</div>}
       {!identity && !error && <p role="status">Chargement du contenu…</p>}
       {identity && (
         <>
-          <form className="site-identity-form" onSubmit={(event) => void saveIdentity(event)}>
-            <h3>Identité de l'établissement</h3>
+          {mode === "identity" && <form className="site-identity-form" onSubmit={(event) => void saveIdentity(event)}>
+            <h3>Informations officielles</h3>
             <p className="help">Le nom est modifiable ; son orthographe reste à confirmer par la direction. Les champs non renseignés restent vides sur le site.</p>
             <div className="site-identity-grid">
               {identityFields.map(({ key, label, multiline }) => (
@@ -230,19 +277,49 @@ export function SiteContentWorkspace() {
               ))}
             </div>
             <div className="site-media-grid">
-              <label>Logo (PNG, JPEG ou WebP, 5 Mo maximum)
-                {identity.logoUrl && <img src={mediaUrl(identity.logoUrl)} alt="Logo actuel de l'établissement" />}
+              <label>Logo principal (PNG, JPEG ou WebP, 5 Mo maximum, largeur minimale 600 px)
+                {logo && <img src={logo} alt={`Logo du ${identity.schoolName}`} />}
                 <input type="file" accept="image/png,image/jpeg,image/webp" disabled={busy} onChange={(event) => void uploadMedia("logo", event.target.files?.[0])} />
               </label>
-              <label>Photo de l'établissement
+            </div>
+            <button type="submit" disabled={busy}>Enregistrer l'identité</button>
+          </form>}
+
+          {mode === "identity" && (
+            <>
+              <h3>Aperçu avant validation</h3>
+              <div className="identity-preview-grid">
+                {["Bulletin A4", "Certificat", "Reçu", "Feuille de notes", "Accueil", "Connexion", "Navigation", "Icône PWA"].map((context) => (
+                  <div className="identity-preview" key={context}>
+                    <span>{context}</span>
+                    {logo && <img src={logo} alt="" />}
+                    <strong>{identity.shortName || identity.schoolName}</strong>
+                  </div>
+                ))}
+              </div>
+              <div className="identity-history">
+                <h3>Historique des versions</h3>
+                {versions.map((version) => (
+                  <article key={version.id}>
+                    <span>Version {version.version} · {new Date(version.createdAt).toLocaleString("fr-FR")}</span>
+                    <button type="button" className="secondary" disabled={busy || version.version === identity.version} onClick={() => void restoreVersion(version)}>
+                      Restaurer cette version
+                    </button>
+                  </article>
+                ))}
+                {!versions.length && <p className="empty">L'historique sera alimenté à la première modification de l'identité.</p>}
+              </div>
+            </>
+          )}
+
+          {mode === "content" && <>
+            <div className="site-media-grid">
+              <label>Photo de l'établissement (PNG, JPEG ou WebP)
                 {identity.photoUrl && <img src={mediaUrl(identity.photoUrl)} alt="Photo actuelle de l'établissement" />}
                 <input type="file" accept="image/png,image/jpeg,image/webp" disabled={busy} onChange={(event) => void uploadMedia("photo", event.target.files?.[0])} />
               </label>
             </div>
-            <button type="submit" disabled={busy}>Enregistrer l'identité</button>
-          </form>
-
-          <form className="announcement-editor" onSubmit={(event) => void saveAnnouncement(event)}>
+            <form className="announcement-editor" onSubmit={(event) => void saveAnnouncement(event)}>
             <h3>{editingId ? "Modifier une annonce ou une date" : "Ajouter une annonce ou une date"}</h3>
             <p className="help wide-field">Ces informations sont publiques. Ne publiez aucun nom, matricule, résultat individuel, téléphone personnel ni autre donnée privée.</p>
             <label>Titre<input value={announcement.title} onChange={(event) => setAnnouncement({ ...announcement, title: event.target.value })} minLength={3} maxLength={160} required /></label>
@@ -258,9 +335,9 @@ export function SiteContentWorkspace() {
               <button type="submit" disabled={busy}>{editingId ? "Enregistrer l'annonce" : "Créer l'annonce"}</button>
               {editingId && <button type="button" className="secondary" onClick={() => { setEditingId(""); setAnnouncement({ ...blankAnnouncement }); }}>Annuler la modification</button>}
             </div>
-          </form>
+            </form>
 
-          <div className="site-announcements">
+            <div className="site-announcements">
             <h3>Annonces et calendrier</h3>
             {announcements.map((item) => (
               <article key={item.id}>
@@ -269,7 +346,8 @@ export function SiteContentWorkspace() {
               </article>
             ))}
             {!announcements.length && <p className="empty">Aucune annonce enregistrée.</p>}
-          </div>
+            </div>
+          </>}
         </>
       )}
     </section>

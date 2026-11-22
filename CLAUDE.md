@@ -28,7 +28,9 @@
 - Palette « Atelier de tissage » : vert `#006A4E`, jaune `#F2B705`, rouge terre `#C0392B`, indigo `#1F3A6E`, crème `#FBF6EA`, sable `#F1E8D2`, encre `#1C1B18`. Le jaune n'est jamais utilisé comme texte sur fond clair ; les états ont des couleurs, icônes et libellés distincts de la marque.
 - Français, priorité mobile, états et erreurs explicites, prise en compte de `prefers-reduced-motion`.
 - L'identité de l'établissement est lue depuis `SchoolIdentity`, jamais codée en dur dans les documents ou l'interface. Les pages publiques n'exposent aucun dossier individuel.
-- Ne pas reproduire d'emblème officiel. Les mentions institutionnelles restent textuelles.
+- Les armoiries de la République Togolaise sont réservées aux documents officiels, au bandeau institutionnel, à la connexion et à la vérification publique. Elles sont chargées uniquement par `branding.tsx` / `EnTeteOfficiel` et ne sont jamais utilisées comme favicon, PWA, bouton, chargement ou décoration.
+- Le logo du lycée est conservé dans son original non modifié avec son empreinte SHA-256. Ses dérivés sont générés, jamais recolorés ni déformés. Un nouveau logo accepté par la direction doit avoir au moins 600 px de large et produit des versions 64/128/256/512/1024 px.
+- Les documents déjà émis sont figés avec l'identité et la version du logo utilisées à leur émission. Tout document issu des données fictives porte automatiquement « SPÉCIMEN - DONNÉES FICTIVES ».
 
 ## Accueil public et sécurité
 

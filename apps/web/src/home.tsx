@@ -1,13 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import { API_ORIGIN, api } from "./api";
+import { ArmoiriesTogo, schoolLogoSource } from "./branding";
 import "./home.css";
 
 type SchoolIdentity = {
   schoolName: string;
+  shortName: string;
+  monogram: string;
   cycleSubtitle: string;
   ministry: string;
   regionalDirectorate: string;
   inspection: string;
+  republicName: string;
   republicMotto: string;
   schoolMotto: string;
   address: string;
@@ -210,7 +214,7 @@ export function HomePage({ onLogin }: { onLogin: () => void }) {
   };
 
   const identity = site?.identity;
-  const logo = safeMediaUrl(identity?.logoUrl ?? null);
+  const logo = schoolLogoSource(identity?.logoUrl);
   const photo = safeMediaUrl(identity?.photoUrl ?? null);
   const directions = safeDirectionsUrl(identity?.directionsUrl ?? "");
 
@@ -222,6 +226,7 @@ export function HomePage({ onLogin }: { onLogin: () => void }) {
     <main className="public-site">
       <div className="national-bar" aria-hidden="true"><span /><span /></div>
       <div className="administrative-ribbon">
+        <ArmoiriesTogo size="screen" className="public-ribbon-arms" />
         <span>République Togolaise · {identity?.republicMotto ?? "…"}</span>
         <span>{identity?.ministry ?? "…"}</span>
         <span>{identity?.regionalDirectorate ?? "…"}</span>
@@ -231,8 +236,12 @@ export function HomePage({ onLogin }: { onLogin: () => void }) {
       <header className="public-header">
         <a className="school-brand" href="#accueil" aria-label={identity ? `Accueil ${identity.schoolName}` : "Accueil établissement"}>
           {logo
-            ? <img className="school-logo" src={logo} alt="" />
-            : <span className="school-monogram" aria-hidden="true">{identity?.schoolName?.split(/\s+/).slice(0, 2).map((part) => part[0]).join("") ?? "É"}</span>}
+            ? <picture>
+                {identity?.logoUrl === "/assets/etablissement/logo-128.webp" &&
+                  <source media="(max-width: 560px)" srcSet="/assets/etablissement/logo-compact.webp" />}
+                <img className="school-logo" src={logo} alt={`Logo du ${identity?.schoolName ?? "l'établissement"}`} fetchPriority="high" />
+              </picture>
+            : <span className="school-monogram" aria-hidden="true">{identity?.monogram ?? "AG"}</span>}
           <span><strong>{identity?.schoolName ?? "Établissement scolaire"}</strong><small>{identity?.cycleSubtitle ?? "Espace officiel"}</small></span>
         </a>
         <nav className="public-nav" aria-label="Navigation du site">
@@ -302,6 +311,7 @@ export function HomePage({ onLogin }: { onLogin: () => void }) {
 
       <section className="verify-section" aria-labelledby="verify-title">
         <div>
+          <ArmoiriesTogo size="screen" />
           <p className="public-eyebrow">Contrôle de document</p>
           <h2 id="verify-title">Vérifier un document</h2>
           <p>Entrez la référence imprimée ou lisez le QR code. Aucune information personnelle n'est affichée.</p>

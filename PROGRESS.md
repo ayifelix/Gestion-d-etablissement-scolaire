@@ -1,6 +1,6 @@
 # Avancement de la plateforme
 
-Mise à jour : 21 novembre 2026
+Mise à jour : 22 novembre 2026
 
 ## J0 — Cadrage
 
@@ -41,18 +41,25 @@ Mise à jour : 21 novembre 2026
 
 - [~] M11 : frais configurables, affectations, soldes recalculés, remises, échéanciers, paiements, annulations tracées, reçus séquentiels et clôture de caisse ; QR graphique, relances SMS et recette complète à faire
 - [~] M12 : tableau mensuel par enseignant et cycle, prévision depuis les affectations, heures d'emploi du temps et cahier de textes, heures supplémentaires, alertes de dépassement, vue des vacataires/volontaires et export CSV ; recette métier complète à faire
-- [ ] Documents officiels et QR (M14)
+- [~] M14 : certificats, attestations, relevés et duplicatas émis avec numéro unique/QR, vérification publique minimale, annulation et audit ; test d'impression réelle et recette J4 restant à faire
 
 ## Accueil public et identité de l'établissement
 
 - [x] Identité paramétrable en base, seedée avec les mentions institutionnelles fournies ; contacts non confirmés laissés vides
-- [x] Page publique responsive `/` : sections familles/personnels, annonces, contrôle de reçus, présentation, contact et FAQ
+- [x] Page publique responsive `/` : sections familles/personnels, annonces, contrôle de reçus et documents, présentation, contact et FAQ
 - [x] Éditeur de l'accueil réservé à DIR avec permission `site.gerer_contenu`, portée établissement et journalisation
 - [x] Téléversement direction de logo/photo en PNG, JPEG ou WebP, limite 5 Mo et contrôle de signature binaire
 - [x] Connexion harmonisée, redirection initiale selon rôle, TOTP activable par l'utilisateur et page d'aide au mot de passe
 - [x] Identité appliquée à l'en-tête des bulletins, feuilles de notes et reçus imprimés
 - [x] Cache PWA du shell et mise en cache locale des annonces publiques ; stratégie de rafraîchissement du service worker corrigée
-- [ ] PDF officiel/M14 : certificats et relevés non encore vérifiables
+- [~] Documents M14 imprimables avec QR ; export/rendu PDF par navigateur non encore testé
+ - [x] Logo et armoiries joints copiés sans modification avec SHA-256 vérifiées
+ - [x] Dérivés du logo (64/128/256/512/1024 px, compact, PWA, partage, impression) générés
+ - [x] Palette marine/rouge/or/vert/crème/sable mise en place dans l'accueil, la connexion et les documents
+ - [x] Permission `etablissement.gerer_identite`, écran d'identité, historique et restauration ajoutés
+ - [x] Snapshots d'identité ajoutés aux bulletins, reçus et documents officiels
+ - [x] Mention « SPÉCIMEN - DONNÉES FICTIVES » prévue pour les données du seed
+ - [ ] Migration locale d'identité non appliquée : Docker Desktop ne fournit pas encore le moteur PostgreSQL
 - [ ] Politique de rôles rendant le TOTP obligatoire à arbitrer
 
 ## J5 — Communication, examens et clôture
@@ -70,10 +77,11 @@ Mise à jour : 21 novembre 2026
 
 ## Vérifications réellement exécutées
 
-- [x] `npm.cmd test` : 22 tests passés (règles J1/J2/J3/J4, TOTP et routes publiques)
-- [x] `npm.cmd run build` : API et interface compilées après la correction du cache PWA
+- [x] `npm.cmd test` : 23 tests passés (règles J1/J2/J3/J4, TOTP, documents et routes publiques)
+- [x] `npm.cmd run build` : API et interface compilées avec l'émission M14 et les QR
 - [x] `prisma migrate status` : migration identité/accueil appliquée à la base locale ; seed exécuté
 - [x] Tests API : aucune donnée privée dans les réponses publiques, statuts de vérification, limitation de débit, accès direction uniquement et audit
+- [x] Tests M14 : portée direction/secrétariat, bulletin publié requis, annulation tracée et réponses publiques minimales
 - [x] Parcours navigateur réel : page d'accueil mobile 360 px et ordinateur 1366 px, connexion, éditeur direction et redirections initiales des comptes de démonstration par rôle
 - [x] Build Vite de production aperçu via proxy `/api` ; aucune erreur console observée sur l'accueil après chargement propre
 - [x] Accueil et sections rendus hors connexion depuis le cache ; une ancienne feuille de style a révélé un cache de service worker obsolète, corrigé puis reconstruit
@@ -94,7 +102,7 @@ Mise à jour : 21 novembre 2026
 
 - Cette version ne constitue pas une livraison J6 ni une plateforme de production.
 - La version actuelle est un monolithe TypeScript et non Django/DRF.
-- M14, les modules J5 et les scénarios J6 restent à réaliser ; les reçus seuls disposent actuellement d'une vérification publique.
+- M14 est implémenté mais n'a pas encore passé la recette d'impression PDF ni un scénario d'émission complet sur la base de démonstration ; les modules J5 et les scénarios J6 restent à réaliser.
 - Le TOTP est disponible et activable dans l'espace « Sécurité », mais sa politique obligatoire par rôle n'a pas été arbitrée.
 - Les tests navigateur ont été réalisés sur l'accueil et les redirections, mais aucun rapport Lighthouse, recette hors ligne complète, rendu PDF exporté ou rapport de charge n'est disponible.
 - La notification disciplinaire est consignée manuellement : aucun SMS n'est réellement envoyé ; les justificatifs ne sont pas téléversés.

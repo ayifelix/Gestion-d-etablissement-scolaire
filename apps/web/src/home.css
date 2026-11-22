@@ -1,8 +1,9 @@
 .public-site {
-  --brand-green: #006a4e;
-  --brand-yellow: #f2b705;
-  --brand-red: #c0392b;
-  --brand-indigo: #1f3a6e;
+  --brand-green: #157336;
+  --brand-yellow: #fabc05;
+  --brand-red: #b20202;
+  --brand-indigo: #011e61;
+  --brand-primary: #011e61;
   --brand-cream: #fbf6ea;
   --brand-sand: #f1e8d2;
   --brand-ink: #1c1b18;
@@ -29,7 +30,7 @@
   flex-wrap: wrap;
   gap: 5px 18px;
   padding: 6px 16px;
-  background: var(--brand-green);
+  background: var(--brand-primary);
   color: var(--brand-cream);
   font-size: 11px;
   letter-spacing: .02em;
@@ -51,20 +52,23 @@
 .school-brand strong { font-size: 15px; line-height: 1.15; }
 .school-brand small { color: #514d43; font-size: 12px; }
 .school-monogram { width: 42px; height: 42px; display: grid; place-items: center; flex: 0 0 auto; border: 2px solid var(--brand-green); color: var(--brand-green); font-family: Georgia, serif; font-weight: 800; }
-.school-logo { width: 44px; height: 44px; object-fit: contain; }
+.school-logo { width: 44px; height: 44px; padding: 3px; background: var(--brand-cream); object-fit: contain; }
+.school-brand-picture { display: inline-flex; }
 .public-nav { display: none; gap: 20px; }
 .public-nav a { font-size: 13px; font-weight: 700; text-decoration: none; }
 .public-login-link, .hero-button, .verify-controls button {
   min-height: 44px;
   border: 0;
   border-radius: 2px;
-  background: var(--brand-green);
+  background: var(--brand-primary);
   color: var(--brand-cream);
   font-weight: 800;
   padding: 10px 15px;
 }
 .public-login-link { max-width: 190px; font-size: 12px; }
-.public-login-link:hover, .hero-button:hover, .verify-controls button:hover { background: #00523d; }
+.public-login-link:hover { background: #001544; }
+.hero-button:hover { background: #dfaa00; }
+.verify-controls button:hover { background: #dfaa00; }
 .public-hero {
   position: relative;
   isolation: isolate;
@@ -90,7 +94,7 @@
 .public-eyebrow { margin: 0 0 8px; color: var(--brand-green); font-size: 11px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
 .hero-copy h1 { max-width: 750px; margin: 0; color: var(--brand-indigo); font-family: Georgia, "Times New Roman", serif; font-size: clamp(36px, 9vw, 72px); font-weight: 700; letter-spacing: -.035em; line-height: 1.04; }
 .hero-subtitle { margin: 9px 0 0; color: var(--brand-indigo); font-size: clamp(16px, 3vw, 21px); font-weight: 800; }
-.hero-motto { max-width: 780px; margin: 20px 0 0; color: var(--brand-green); font-family: Georgia, "Times New Roman", serif; font-size: clamp(28px, 6vw, 48px); line-height: 1.12; }
+.hero-motto { max-width: 780px; margin: 20px 0 0; color: var(--brand-primary); font-family: Georgia, "Times New Roman", serif; font-size: clamp(28px, 6vw, 48px); line-height: 1.12; }
 .hero-summary { max-width: 470px; margin: 18px 0 24px; color: #39362f; font-size: 16px; line-height: 1.55; }
 .hero-button { min-width: 220px; display: inline-flex; align-items: center; justify-content: space-between; gap: 18px; min-height: 50px; background: var(--brand-yellow); color: var(--brand-ink); font-size: 14px; }
 .hero-button:hover { background: #dfaa00; }
@@ -176,11 +180,12 @@
 .faq-section details { border-top: 1px solid #cfc5b0; padding: 15px 0; }
 .faq-section summary { color: var(--brand-indigo); cursor: pointer; font-weight: 800; }
 .faq-section details p { max-width: 720px; margin: 12px 0 0; color: #49453b; line-height: 1.5; }
-.public-footer { padding: 26px max(16px, calc((100% - 1040px) / 2)); background: var(--brand-green); color: var(--brand-cream); font-size: 12px; }
+.public-footer { padding: 26px max(16px, calc((100% - 1040px) / 2)); background: var(--brand-primary); color: var(--brand-cream); font-size: 12px; }
 .public-footer > span { font-weight: 800; }
 .public-footer > div { display: flex; flex-wrap: wrap; gap: 10px 20px; margin: 14px 0; }
 .public-footer a, .public-footer button { border: 0; padding: 0; background: transparent; color: var(--brand-cream); text-decoration: underline; text-underline-offset: 3px; }
 .public-footer p { max-width: 680px; color: #e4eee8; line-height: 1.5; }
+.login-arms { width: auto; height: 40px; min-height: 40px; }
 .pwa-install { position: fixed; z-index: 3; right: 12px; bottom: 12px; border: 2px solid var(--brand-cream); border-radius: 2px; padding: 12px 16px; background: var(--brand-indigo); color: var(--brand-cream); font-weight: 800; box-shadow: 0 3px 12px #1c1b1840; }
 
 @media (min-width: 720px) {
@@ -213,6 +218,20 @@
   .public-login-link { max-width: 120px; padding-inline: 8px; font-size: 11px; }
   .public-nav { display: none; }
 }
+@media (max-width: 560px) {
+  .public-header .school-logo { width: 40px; height: 40px; }
+}
 @media (prefers-reduced-motion: reduce) {
   .public-site *, .public-site *::before, .public-site *::after { animation: none !important; scroll-behavior: auto !important; }
+}
+.public-ribbon-arms { flex: 0 0 auto; }
+.school-brand .school-logo { animation: brand-appear .4s ease-out both; }
+@keyframes brand-appear { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .school-brand .school-logo { animation: none; }
+}
+@media (prefers-color-scheme: dark) {
+  .public-site { --brand-cream: #171b24; --brand-sand: #242a35; --brand-ink: #f8f4e9; color: var(--brand-ink); background: var(--brand-cream); }
+  .public-header, .audience-entry, .parent-steps li, .cycle-presentations article, .verification-result, .public-error { background-color: #202630; }
+  .school-logo, .togo-arms { background: #fbf6ea; }
 }

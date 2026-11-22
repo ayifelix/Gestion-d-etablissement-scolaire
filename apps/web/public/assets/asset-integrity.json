@@ -1,0 +1,15 @@
+{
+  "schoolLogoOriginal": {
+    "path": "/assets/etablissement/logo-original.png",
+    "sha256": "CDFC734188DFFE8BF28C8109FEB54D9DCAA0A3C70FBC81F372B96CE1E259EE04",
+    "width": 840,
+    "height": 768
+  },
+  "togoArmsOriginal": {
+    "path": "/assets/officiel/armoiries-togo.png",
+    "sha256": "4B23E13971557F6EE11F61125C40438A40604086CA7C8CFB10204ECF96D12DB4",
+    "width": 768,
+    "height": 1106,
+    "sourceFormat": "PNG"
+  }
+}

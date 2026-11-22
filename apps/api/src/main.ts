@@ -20,6 +20,7 @@ import { createJ3Router } from "./j3";
 import { createFinanceRouter } from "./finance";
 import { createWorkloadRouter } from "./workload";
 import { createSiteRouter } from "./site";
+import { createDocumentsRouter } from "./documents";
 import { decryptTotpSecret, encryptTotpSecret, generateTotpSecret, verifyTotp } from "./auth-rules";
 
 const app = express();
@@ -258,6 +259,13 @@ app.use("/api", createWorkloadRouter({
 app.use("/api", createSiteRouter({
   prisma,
   authenticate,
+  currentAuth,
+  writeAudit,
+}));
+app.use("/api", createDocumentsRouter({
+  prisma,
+  authenticate,
+  requireRole,
   currentAuth,
   writeAudit,
 }));
@@ -1342,14 +1350,20 @@ app.post("/api/report-cards/generate", authenticate, requireRole(PersonRole.DIR,
     generatedAt: new Date().toISOString(),
     schoolIdentity: {
       schoolName: schoolIdentity.schoolName,
+      shortName: schoolIdentity.shortName,
+      monogram: schoolIdentity.monogram,
       cycleSubtitle: schoolIdentity.cycleSubtitle,
       ministry: schoolIdentity.ministry,
       regionalDirectorate: schoolIdentity.regionalDirectorate,
       inspection: schoolIdentity.inspection,
+      republicName: schoolIdentity.republicName,
       republicMotto: schoolIdentity.republicMotto,
       schoolMotto: schoolIdentity.schoolMotto,
       logoUrl: schoolIdentity.logoUrl,
+      logoVersionId: schoolIdentity.logoVersionId,
+      identityVersion: schoolIdentity.version,
     },
+    isSpecimen: enrollments.find(({ student }) => student.id === row.studentId)?.student.isDemo ?? false,
   }));
   try {
     const reportCards = await prisma.$transaction(snapshots.map((snapshot) =>

@@ -31,7 +31,8 @@ async function main() {
     "structure.lire", "structure.gerer", "eleve.lire_identite",
     "eleve.creer", "eleve.modifier_etat_civil", "eleve.verifier_etat_civil",
     "inscription.creer", "enseignant.creer", "affectation.creer",
-    "affectation.cloturer", "titulariat.designer", "site.gerer_contenu", "admin.utilisateurs",
+    "affectation.cloturer", "titulariat.designer", "site.gerer_contenu",
+    "etablissement.gerer_identite", "admin.utilisateurs",
     "admin.roles", "admin.audit_lire", "admin.sauvegarde",
   ];
   for (const code of permissionCodes) {
@@ -43,18 +44,74 @@ async function main() {
   }
 
   const contentPermission = await prisma.permission.findUniqueOrThrow({ where: { code: "site.gerer_contenu" } });
+  const identityPermission = await prisma.permission.findUniqueOrThrow({ where: { code: "etablissement.gerer_identite" } });
   const directionRole = await prisma.role.findUniqueOrThrow({ where: { code: PersonRole.DIR } });
   await prisma.rolePermission.upsert({
     where: { roleId_permissionId: { roleId: directionRole.id, permissionId: contentPermission.id } },
     update: {},
     create: { roleId: directionRole.id, permissionId: contentPermission.id },
   });
+  await prisma.rolePermission.upsert({
+    where: { roleId_permissionId: { roleId: directionRole.id, permissionId: identityPermission.id } },
+    update: {},
+    create: { roleId: directionRole.id, permissionId: identityPermission.id },
+  });
 
-  await prisma.schoolIdentity.upsert({
+  const schoolIdentity = await prisma.schoolIdentity.upsert({
     where: { id: "school" },
     update: {},
-    create: { id: "school" },
+    create: {
+      id: "school",
+      logoUrl: "/assets/etablissement/logo-128.webp",
+      shortName: "Akonda",
+      monogram: "AG",
+    },
   });
+  if (!schoolIdentity.logoUrl) {
+    Object.assign(schoolIdentity, await prisma.schoolIdentity.update({
+      where: { id: "school" },
+      data: { logoUrl: "/assets/etablissement/logo-128.webp", shortName: "Akonda", monogram: "AG" },
+    }));
+  }
+  const identityVersion = await prisma.schoolIdentityVersion.findUnique({
+    where: { schoolIdentityId_version: { schoolIdentityId: schoolIdentity.id, version: schoolIdentity.version } },
+  });
+  if (!identityVersion) {
+    const snapshot = {
+      schoolName: schoolIdentity.schoolName,
+      shortName: schoolIdentity.shortName,
+      monogram: schoolIdentity.monogram,
+      cycleSubtitle: schoolIdentity.cycleSubtitle,
+      ministry: schoolIdentity.ministry,
+      regionalDirectorate: schoolIdentity.regionalDirectorate,
+      inspection: schoolIdentity.inspection,
+      republicName: schoolIdentity.republicName,
+      republicMotto: schoolIdentity.republicMotto,
+      schoolMotto: schoolIdentity.schoolMotto,
+      address: schoolIdentity.address,
+      phone: schoolIdentity.phone,
+      email: schoolIdentity.email,
+      secretariatHours: schoolIdentity.secretariatHours,
+      headName: schoolIdentity.headName,
+      headMessage: schoolIdentity.headMessage,
+      collegePresentation: schoolIdentity.collegePresentation,
+      lyceePresentation: schoolIdentity.lyceePresentation,
+      directionsUrl: schoolIdentity.directionsUrl,
+      logoUrl: schoolIdentity.logoUrl,
+      compactLogoUrl: schoolIdentity.compactLogoUrl,
+      logoVersionId: schoolIdentity.logoVersionId,
+      photoUrl: schoolIdentity.photoUrl,
+      version: schoolIdentity.version,
+    };
+    await prisma.schoolIdentityVersion.create({
+      data: {
+        schoolIdentityId: schoolIdentity.id,
+        version: schoolIdentity.version,
+        snapshot,
+        createdBy: "seed",
+      },
+    });
+  }
 
   await prisma.cycle.upsert({
     where: { code: SchoolCycle.COLLEGE },
@@ -255,11 +312,12 @@ async function main() {
   });
   const demoStudent = await prisma.student.upsert({
     where: { matricule: "DEMO-2026-000001" },
-    update: { personId: demoStudentPerson.id },
+    update: { personId: demoStudentPerson.id, isDemo: true },
     create: {
       personId: demoStudentPerson.id,
       matricule: "DEMO-2026-000001",
       dateAdmission: academicYear.dateStart,
+      isDemo: true,
     },
   });
   const enrollment = await prisma.enrollment.findUnique({

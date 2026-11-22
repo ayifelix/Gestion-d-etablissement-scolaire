@@ -182,42 +182,62 @@ model AuditLog {
 }
 
 model SchoolIdentity {
-  id                    String   @id @default("school")
-  schoolName            String   @default("LYCÉE AKONDA GNAWEME")
-  cycleSubtitle         String   @default("Collège et Lycée")
-  ministry              String   @default("Ministère des Enseignements Primaire et Secondaire (MEPS)")
-  regionalDirectorate   String   @default("DRE-Maritime")
-  inspection            String   @default("IESG-Vogan")
-  republicMotto         String   @default("Travail - Liberté - Patrie")
-  schoolMotto           String   @default("Discipline - Travail - Succès")
-  address               String   @default("")
-  phone                 String   @default("")
-  email                 String   @default("")
-  secretariatHours      String   @default("")
-  headName              String   @default("")
-  headMessage           String   @default("")
-  collegePresentation   String   @default("")
-  lyceePresentation     String   @default("")
-  directionsUrl         String   @default("")
-  logoUrl               String?
-  photoUrl              String?
-  updatedBy             String?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  id                  String                  @id @default("school")
+  schoolName          String                  @default("LYCÉE AKONDA GNAWEME")
+  shortName           String                  @default("LYCÉE AKONDA GNAWEME")
+  monogram            String                  @default("AG")
+  cycleSubtitle       String                  @default("Collège et Lycée")
+  ministry            String                  @default("Ministère des Enseignements Primaire et Secondaire (MEPS)")
+  regionalDirectorate String                  @default("DRE-Maritime")
+  inspection          String                  @default("IESG-Vogan")
+  republicName        String                  @default("République Togolaise")
+  republicMotto       String                  @default("Travail - Liberté - Patrie")
+  schoolMotto         String                  @default("Discipline - Travail - Succès")
+  address             String                  @default("")
+  phone               String                  @default("")
+  email               String                  @default("")
+  secretariatHours    String                  @default("")
+  headName            String                  @default("")
+  headMessage         String                  @default("")
+  collegePresentation String                  @default("")
+  lyceePresentation   String                  @default("")
+  directionsUrl       String                  @default("")
+  logoUrl             String?
+  compactLogoUrl      String?
+  logoVersionId       String?
+  photoUrl            String?
+  version             Int                     @default(1)
+  updatedBy           String?
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+  versions            SchoolIdentityVersion[]
+}
+
+model SchoolIdentityVersion {
+  id               String         @id @default(uuid())
+  schoolIdentityId String
+  version          Int
+  snapshot         Json
+  createdBy        String
+  createdAt        DateTime       @default(now())
+  schoolIdentity   SchoolIdentity @relation(fields: [schoolIdentityId], references: [id], onDelete: Restrict)
+
+  @@unique([schoolIdentityId, version])
+  @@index([schoolIdentityId, createdAt])
 }
 
 model PublicAnnouncement {
-  id          String    @id @default(uuid())
-  title       String
-  summary     String
-  category    String
-  eventAt     DateTime?
-  published   Boolean   @default(false)
-  archivedAt  DateTime?
-  createdBy   String
-  updatedBy   String
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id         String    @id @default(uuid())
+  title      String
+  summary    String
+  category   String
+  eventAt    DateTime?
+  published  Boolean   @default(false)
+  archivedAt DateTime?
+  createdBy  String
+  updatedBy  String
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   @@index([published, archivedAt, eventAt])
 }
@@ -313,6 +333,7 @@ model AcademicYear {
   calculationRules     CalculationRule[]
   assessments          Assessment[]
   reportCards          ReportCard[]
+  officialDocuments    OfficialDocument[]
   timetableSessions    TimetableSession[]
   orientationCampaigns OrientationCampaign[]
   councilMeetings      CouncilMeeting[]
@@ -449,6 +470,7 @@ model Student {
   personId              String               @unique
   person                Person               @relation(fields: [personId], references: [id])
   matricule             String               @unique
+  isDemo                Boolean              @default(false)
   dateAdmission         DateTime
   status                StudentStatus        @default(ACTIF)
   civilStatusVerified   Boolean              @default(false)
@@ -470,6 +492,7 @@ model Student {
   followUps             StudentFollowUp[]
   payments              SchoolPayment[]
   charges               StudentCharge[]
+  officialDocuments     OfficialDocument[]
 }
 
 model Guardian {
@@ -681,26 +704,49 @@ model ClassAppreciation {
 }
 
 model ReportCard {
-  id          String           @id @default(uuid())
-  studentId   String
-  student     Student          @relation(fields: [studentId], references: [id])
-  classId     String
-  class       SchoolClass      @relation(fields: [classId], references: [id])
-  yearId      String
-  year        AcademicYear     @relation(fields: [yearId], references: [id])
-  periodId    String
-  period      Period           @relation(fields: [periodId], references: [id])
-  status      ReportCardStatus @default(BROUILLON)
-  ruleVersion Int
-  snapshot    Json
-  generatedBy String
-  generatedAt DateTime         @default(now())
-  approvedBy  String?
-  approvedAt  DateTime?
-  frozenAt    DateTime?
+  id                String             @id @default(uuid())
+  studentId         String
+  student           Student            @relation(fields: [studentId], references: [id])
+  classId           String
+  class             SchoolClass        @relation(fields: [classId], references: [id])
+  yearId            String
+  year              AcademicYear       @relation(fields: [yearId], references: [id])
+  periodId          String
+  period            Period             @relation(fields: [periodId], references: [id])
+  status            ReportCardStatus   @default(BROUILLON)
+  ruleVersion       Int
+  snapshot          Json
+  generatedBy       String
+  generatedAt       DateTime           @default(now())
+  approvedBy        String?
+  approvedAt        DateTime?
+  frozenAt          DateTime?
+  officialDocuments OfficialDocument[]
 
   @@unique([studentId, yearId, periodId])
   @@index([classId, yearId, periodId, status])
+}
+
+model OfficialDocument {
+  id                String       @id @default(uuid())
+  number            String       @unique
+  verificationToken String       @unique
+  type              String
+  specimen          Boolean      @default(false)
+  identitySnapshot  Json
+  studentId         String
+  student           Student      @relation(fields: [studentId], references: [id])
+  yearId            String
+  year              AcademicYear @relation(fields: [yearId], references: [id])
+  reportCardId      String?
+  reportCard        ReportCard?  @relation(fields: [reportCardId], references: [id])
+  issuedBy          String
+  issuedAt          DateTime     @default(now())
+  revokedAt         DateTime?
+  revokeReason      String?
+
+  @@index([studentId, yearId, issuedAt])
+  @@index([reportCardId])
 }
 
 model TimetableSlot {
@@ -1004,20 +1050,22 @@ model ReceiptCounter {
 }
 
 model SchoolPayment {
-  id             String              @id @default(uuid())
-  studentId      String
-  student        Student             @relation(fields: [studentId], references: [id])
-  receiptNumber  String              @unique
-  qrToken        String              @unique
-  amount         Int
-  method         PaymentMethod
-  transactionRef String?
-  receivedBy     String
-  paidAt         DateTime            @default(now())
-  allocations    PaymentAllocation[]
-  reversal       PaymentReversal?
-  schoolClass    SchoolClass?        @relation(fields: [schoolClassId], references: [id])
-  schoolClassId  String?
+  id               String              @id @default(uuid())
+  studentId        String
+  student          Student             @relation(fields: [studentId], references: [id])
+  receiptNumber    String              @unique
+  qrToken          String              @unique
+  amount           Int
+  method           PaymentMethod
+  transactionRef   String?
+  receivedBy       String
+  specimen         Boolean             @default(false)
+  identitySnapshot Json
+  paidAt           DateTime            @default(now())
+  allocations      PaymentAllocation[]
+  reversal         PaymentReversal?
+  schoolClass      SchoolClass?        @relation(fields: [schoolClassId], references: [id])
+  schoolClassId    String?
 
   @@index([studentId, paidAt])
   @@index([method, paidAt])

@@ -1,6 +1,7 @@
 import React, { Suspense, lazy, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { API_ORIGIN, api } from "./api";
+import { api } from "./api";
+import { ArmoiriesTogo, schoolLogoSource } from "./branding";
 import { HomePage } from "./home";
 import "./styles.css";
 
@@ -12,10 +13,13 @@ type LoginResponse = {
 };
 type PublicIdentity = {
   schoolName: string;
+  shortName: string;
+  monogram: string;
   cycleSubtitle: string;
   ministry: string;
   regionalDirectorate: string;
   inspection: string;
+  republicName: string;
   republicMotto: string;
   phone: string;
   email: string;
@@ -81,9 +85,7 @@ function Login({ onLogin }: { onLogin: (roles: string[]) => void }) {
     }
   };
 
-  const logo = identity?.logoUrl && /^\/api\/public\/media\/[0-9a-f-]{36}\.(png|jpg|webp)$/.test(identity.logoUrl)
-    ? `${API_ORIGIN}${identity.logoUrl}`
-    : null;
+  const logo = schoolLogoSource(identity?.logoUrl);
 
   return (
     <main className="login-page">
@@ -91,9 +93,9 @@ function Login({ onLogin }: { onLogin: (roles: string[]) => void }) {
       <header className="login-header">
         <a className="school-brand" href="/" aria-label="Retour à l'accueil">
           {logo
-            ? <img className="school-logo" src={logo} alt="" />
-            : <span className="school-monogram" aria-hidden="true">{identity?.schoolName?.split(/\s+/).slice(0, 2).map((part) => part[0]).join("") ?? "É"}</span>}
-          <span><strong>{identity?.schoolName ?? "Établissement scolaire"}</strong><small>{identity?.cycleSubtitle ?? "Espace officiel"}</small></span>
+            ? <img className="school-logo" src={logo} alt={`Logo du ${identity?.schoolName ?? "l'établissement"}`} />
+            : <span className="school-monogram" aria-hidden="true">{identity?.monogram ?? "AG"}</span>}
+          <span><ArmoiriesTogo size="small" className="login-arms" /><strong>{identity?.schoolName ?? "Établissement scolaire"}</strong><small>{identity?.cycleSubtitle ?? "Espace officiel"}</small></span>
         </a>
         <a href="/">Accueil</a>
       </header>

@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { API_ORIGIN, api } from "./api";
+import { api } from "./api";
+import { EnTeteOfficiel, schoolLogoSource, type SchoolBrandIdentity } from "./branding";
 import { J3Workspace } from "./j3";
 import { FinanceWorkspace } from "./finance";
 import { WorkloadWorkspace } from "./workload";
 import { SiteContentWorkspace } from "./site-content";
 import { SecurityWorkspace } from "./security";
+import { DocumentsWorkspace } from "./documents";
 import "./styles.css";
 
 type Student = {
@@ -23,7 +25,7 @@ type Mark = {
   studentId: string;
   status: "NOTE" | "ABSENT_JUSTIFIE" | "ABSENT_NON_JUSTIFIE" | "DISPENSE" | "NON_NOTE";
   value: number | null;
-  student: { matricule: string; person: { nom: string; prenoms: string } };
+  student: { matricule: string; isDemo?: boolean; person: { nom: string; prenoms: string } };
 };
 type Assessment = {
   id: string;
@@ -38,16 +40,7 @@ type Assessment = {
   teacher: { person: { nom: string; prenoms: string } };
 };
 type Issue = { code: string; message: string; assessmentId?: string };
-type PrintableIdentity = {
-  schoolName: string;
-  cycleSubtitle: string;
-  ministry: string;
-  regionalDirectorate: string;
-  inspection: string;
-  republicMotto: string;
-  schoolMotto: string;
-  logoUrl: string | null;
-};
+type PrintableIdentity = SchoolBrandIdentity;
 
 export function DashboardApp({ initialTab, onLogout }: { initialTab: string; onLogout: () => void }) {
   const [tab, setTab] = useState(initialTab);
@@ -249,10 +242,7 @@ export function DashboardApp({ initialTab, onLogout }: { initialTab: string; onL
   }, "Bulletins actualisés.");
 
   const hasRole = (...codes: string[]) => codes.some((code) => userRoles.includes(code));
-  const identityLogo = schoolIdentity?.logoUrl &&
-    /^\/api\/public\/media\/[0-9a-f-]{36}\.(png|jpg|webp)$/.test(schoolIdentity.logoUrl)
-    ? `${API_ORIGIN}${schoolIdentity.logoUrl}`
-    : null;
+  const identityLogo = schoolLogoSource(schoolIdentity?.logoUrl);
   const nav = [
     "tableau de bord",
     "sécurité",
@@ -266,14 +256,18 @@ export function DashboardApp({ initialTab, onLogout }: { initialTab: string; onL
     ...(hasRole("DIR", "CEN", "SG", "SEC", "PROF", "TIT", "PAR") ? ["pédagogie"] : []),
     ...(hasRole("DIR", "CEN", "PROF", "TIT") ? ["charge horaire"] : []),
     ...(hasRole("DIR", "ECO") ? ["finances"] : []),
+    ...(hasRole("DIR", "SEC") ? ["documents"] : []),
     ...(userPermissions.includes("site.gerer_contenu") ? ["contenu de l'accueil"] : []),
+    ...(userPermissions.includes("etablissement.gerer_identite") ? ["identité de l'établissement"] : []),
   ];
 
   return (
     <div className="shell">
       <aside>
-        <div className="logo">GS</div>
-        <h2>Gestion scolaire</h2>
+        <div className="logo">{identityLogo
+          ? <img src={identityLogo} alt={`Logo du ${schoolIdentity?.schoolName ?? "Lycée Akonda Gnaweme"}`} />
+          : schoolIdentity?.monogram ?? "AG"}</div>
+        <h2>{schoolIdentity?.shortName || schoolIdentity?.schoolName || "Gestion scolaire"}</h2>
         <nav aria-label="Navigation principale">
           {nav.map((item) => (
             <button className={tab === item ? "active" : ""} key={item} onClick={() => setTab(item)}>{item}</button>
@@ -295,6 +289,7 @@ export function DashboardApp({ initialTab, onLogout }: { initialTab: string; onL
           {tab === "finances" && <FinanceWorkspace roles={userRoles} />}
           {tab === "charge horaire" && <WorkloadWorkspace roles={userRoles} />}
           {tab === "contenu de l'accueil" && <SiteContentWorkspace />}
+          {tab === "identité de l'établissement" && <SiteContentWorkspace mode="identity" />}
           {tab === "sécurité" && <SecurityWorkspace />}
 
           {tab === "tableau de bord" && (
@@ -355,6 +350,8 @@ export function DashboardApp({ initialTab, onLogout }: { initialTab: string; onL
               </div>
             </section>
           )}
+
+          {tab === "documents" && <DocumentsWorkspace roles={userRoles} />}
 
           {(tab === "notes" || tab === "vérification" || tab === "bulletins" || tab === "ma classe") && (
             <section>
@@ -482,14 +479,9 @@ export function DashboardApp({ initialTab, onLogout }: { initialTab: string; onL
           )}
         </div>
         {printAssessment && <div className="printable-document">
-          <header className="document-identity">
-            {identityLogo && <img src={identityLogo} alt="" />}
-            <div><strong>{schoolIdentity?.schoolName ?? "Établissement scolaire"}</strong>
-              <span>{schoolIdentity?.ministry}</span><span>{schoolIdentity?.regionalDirectorate} · {schoolIdentity?.inspection}</span>
-              <span>{schoolIdentity?.cycleSubtitle}</span>
-            </div>
-          </header>
-          <h1>Feuille de notes</h1>
+          <EnTeteOfficiel identity={schoolIdentity} title="Feuille de notes" showArms={false} />
+          {printAssessment.marks.some((mark) => mark.student.isDemo) &&
+            <div className="specimen-watermark">SPÉCIMEN - DONNÉES FICTIVES</div>}
           <p>{printAssessment.subject.label} · {printAssessment.title} · {printAssessment.date.slice(0, 10)} · Barème {printAssessment.maxScore}</p>
           <table><thead><tr><th>Matricule</th><th>Élève</th><th>Statut</th><th>Note</th></tr></thead>
             <tbody>{printAssessment.marks.map((mark) => {
@@ -503,15 +495,12 @@ export function DashboardApp({ initialTab, onLogout }: { initialTab: string; onL
           <footer>{schoolIdentity?.schoolMotto} · {schoolIdentity?.republicMotto}</footer>
         </div>}
         {printCard && <div className="printable-document">
-          <header className="document-identity">
-            {identityLogo && <img src={identityLogo} alt="" />}
-            <div><strong>{printCard.snapshot?.schoolIdentity?.schoolName ?? schoolIdentity?.schoolName ?? "Établissement scolaire"}</strong>
-              <span>{printCard.snapshot?.schoolIdentity?.ministry ?? schoolIdentity?.ministry}</span>
-              <span>{printCard.snapshot?.schoolIdentity?.regionalDirectorate ?? schoolIdentity?.regionalDirectorate} · {printCard.snapshot?.schoolIdentity?.inspection ?? schoolIdentity?.inspection}</span>
-              <span>{printCard.snapshot?.schoolIdentity?.cycleSubtitle ?? schoolIdentity?.cycleSubtitle}</span>
-            </div>
-          </header>
-          <h1>Bulletin scolaire</h1>
+          <EnTeteOfficiel
+            identity={printCard.snapshot?.schoolIdentity ? { ...schoolIdentity, ...printCard.snapshot.schoolIdentity } : schoolIdentity}
+            title="Bulletin scolaire"
+            year={printCard.year?.label}
+          />
+          {printCard.snapshot?.isSpecimen && <div className="specimen-watermark">SPÉCIMEN - DONNÉES FICTIVES</div>}
           <p>{printCard.student.person.nom} {printCard.student.person.prenoms} · {printCard.student.matricule}</p>
           <p>{printCard.class?.name ?? selectedClass?.name ?? ""} · {printCard.period.label}</p>
           <table><thead><tr><th>Matière</th><th>Coefficient</th><th>Moyenne</th><th>Rang</th></tr></thead>

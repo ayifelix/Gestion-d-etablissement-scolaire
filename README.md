@@ -24,9 +24,11 @@ Accueil public : http://localhost:5173/
 
 ## Identité de l'établissement et accueil
 
+Les originaux officiels sont conservés sous `apps/web/public/assets/officiel/` et `apps/web/public/assets/etablissement/`. `npm.cmd run brand:build -w apps/api` régénère les dérivés du logo ; cette commande ne modifie jamais l'original.
+
 Les valeurs initiales de l'établissement et le contenu du site sont stockés en base dans `SchoolIdentity` et modifiables depuis l'espace de la direction (« Contenu de l'accueil »). L'orthographe du nom reste à confirmer ; les coordonnées non renseignées restent vides. Les annonces publiées sont publiques : n'y inscrivez aucune donnée individuelle.
 
-La page `/` est consultable sans compte. Le contrôle public prend en charge les reçus de paiement ; les certificats et relevés (M14) ne sont pas encore implémentés. La configuration TOTP se trouve dans l'onglet « Sécurité » de chaque espace. La politique de TOTP obligatoire par rôle reste à arbitrer.
+La page `/` est consultable sans compte. Le contrôle public prend en charge les reçus et les documents officiels M14 par référence ou QR, sans exposer de données d'élève. La direction et le secrétariat peuvent émettre les certificats, attestations, relevés et duplicatas ; toute annulation reste journalisée. Les documents s'impriment depuis l'interface (PDF via la boîte d'impression du navigateur), sans service de génération PDF côté serveur. La configuration TOTP se trouve dans l'onglet « Sécurité » de chaque espace. Le TOTP n'est pas encore imposé par rôle.
 
 En développement, l'API est sur `http://localhost:4000/api`. Le build de production utilise `/api` sur la même origine ; définissez `VITE_API_URL` lors du build si le backend est hébergé séparément. Configurez TLS, CSP et HSTS sur le reverse proxy de production.
 
@@ -60,6 +62,7 @@ Sur une base neuve, le compte initial `admin` / `Admin#2026` est également cré
 - Import Excel en mode rapport préalable
 - Évaluations, saisie de notes, vérification papier et demandes de correction
 - Checklist de bulletins, formules versionnées et instantanés de résultats
+- Documents officiels M14 : émission contrôlée, référence unique, QR, vérification publique minimale et annulation tracée
 
 Consultez [PROGRESS.md](./PROGRESS.md) pour les limites actuelles et les jalons non livrés, et [DECISIONS.md](./DECISIONS.md) pour les choix de calcul/d'architecture.
 
@@ -67,4 +70,4 @@ Consultez [PROGRESS.md](./PROGRESS.md) pour les limites actuelles et les jalons 
 
 - M11 : frais et paiements configurables, reçus, journal d'annulation et clôture de caisse (configuration des tarifs officiels requise).
 - M12 : tableau mensuel de charge des enseignants, alertes de dépassement et export CSV ; aucune paie n'est calculée.
-- L'accueil public et l'identité paramétrable sont intégrés. M14, les modules J5 et la recette J6 restent à faire ; consultez [PROGRESS.md](./PROGRESS.md).
+- L'accueil public et l'identité paramétrable sont intégrés. M14 est en cours de recette ; les modules J5 et la recette J6 restent à faire. Consultez [PROGRESS.md](./PROGRESS.md).

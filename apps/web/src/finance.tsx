@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { API_ORIGIN, api } from "./api";
+import { EnTeteOfficiel, type SchoolBrandIdentity } from "./branding";
 
 type Year = { id: string; label: string; status: string };
 type Level = { id: string; label: string; cycle: { label: string } };
@@ -12,18 +13,7 @@ type StudentBalance = {
   payments: any[];
   totalBalance: number;
 };
-type ReceiptIdentity = {
-  schoolName: string;
-  cycleSubtitle: string;
-  ministry: string;
-  regionalDirectorate: string;
-  inspection: string;
-  republicMotto: string;
-  schoolMotto: string;
-  address: string;
-  phone: string;
-  logoUrl: string | null;
-};
+type ReceiptIdentity = SchoolBrandIdentity & { phone: string };
 
 const today = () => new Date().toISOString().slice(0, 10);
 const money = (value: number) => `${new Intl.NumberFormat("fr-FR").format(value)} F CFA`;
@@ -302,24 +292,19 @@ export function FinanceWorkspace({ roles }: { roles: string[] }) {
       </>
     )}
     {printReceipt && <div className="printable-document">
-      <header className="document-identity">
-        {receiptIdentity?.logoUrl && /^\/api\/public\/media\/[0-9a-f-]{36}\.(png|jpg|webp)$/.test(receiptIdentity.logoUrl) &&
-          <img src={`${API_ORIGIN}${receiptIdentity.logoUrl}`} alt="" />}
-        <div><strong>{receiptIdentity?.schoolName ?? "Établissement scolaire"}</strong>
-          <span>{receiptIdentity?.ministry}</span>
-          <span>{receiptIdentity?.regionalDirectorate} · {receiptIdentity?.inspection}</span>
-          <span>{receiptIdentity?.cycleSubtitle}</span>
-          {receiptIdentity?.address && <span>{receiptIdentity.address}</span>}
-        </div>
-      </header>
-      <h1>Reçu de paiement</h1>
+      <EnTeteOfficiel
+        identity={printReceipt.identitySnapshot?.schoolName ? printReceipt.identitySnapshot : receiptIdentity}
+        title="Reçu de paiement"
+        showArms={false}
+      />
+      {printReceipt.specimen && <div className="specimen-watermark">SPÉCIMEN - DONNÉES FICTIVES</div>}
       <p>Numéro : <strong>{printReceipt.receiptNumber}</strong></p>
       <p>Élève : {printReceipt.student?.person?.nom} {printReceipt.student?.person?.prenoms}</p>
       <p>Matricule : {printReceipt.student?.matricule}</p>
       <p>Montant : <strong>{money(printReceipt.amount)}</strong></p>
       <p>Mode : {printReceipt.method} · Date : {new Date(printReceipt.paidAt).toLocaleString("fr-FR")}</p>
       <p>Vérification : {API_ORIGIN}/api/public/verify?code={encodeURIComponent(printReceipt.qrToken)}</p>
-      <footer>{receiptIdentity?.schoolMotto} · {receiptIdentity?.republicMotto}</footer>
+      <footer>{printReceipt.identitySnapshot?.schoolMotto ?? receiptIdentity?.schoolMotto} · {printReceipt.identitySnapshot?.republicMotto ?? receiptIdentity?.republicMotto}</footer>
     </div>}
   </section>;
 }

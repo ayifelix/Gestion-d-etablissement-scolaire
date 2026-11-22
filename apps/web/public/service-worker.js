@@ -1,6 +1,10 @@
-const SHELL_CACHE = "school-shell-v3";
-const ASSET_CACHE = "school-assets-v3";
-const SHELL_URLS = ["/", "/index.html", "/manifest.webmanifest", "/site-pattern.svg", "/school-monogram.svg"];
+const SHELL_CACHE = "school-shell-v4";
+const ASSET_CACHE = "school-assets-v4";
+const SHELL_URLS = [
+  "/", "/index.html", "/manifest.webmanifest", "/site-pattern.svg",
+  "/assets/etablissement/logo-128.webp", "/assets/etablissement/logo-compact.webp",
+  "/assets/etablissement/pwa-192.png", "/assets/officiel/armoiries-togo.png",
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(SHELL_CACHE).then((cache) => cache.addAll(SHELL_URLS)));

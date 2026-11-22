@@ -480,6 +480,11 @@ export function createFinanceRouter(deps: FinanceDependencies) {
     }
     try {
       const payment = await prisma.$transaction(async (tx) => {
+        const [identity, student] = await Promise.all([
+          tx.schoolIdentity.findUnique({ where: { id: "school" } }),
+          tx.student.findUnique({ where: { id: parsed.data.studentId }, select: { isDemo: true } }),
+        ]);
+        if (!identity || !student) throw apiError("Élève ou identité de l'établissement introuvable", 404);
         const chargeIds = parsed.data.allocations.map((item) => item.chargeId);
         const charges = await tx.studentCharge.findMany({
           where: { id: { in: chargeIds }, studentId: parsed.data.studentId },
@@ -521,6 +526,23 @@ export function createFinanceRouter(deps: FinanceDependencies) {
             method: parsed.data.method,
             transactionRef: parsed.data.transactionRef,
             receivedBy: auth.sub,
+            specimen: student.isDemo,
+            identitySnapshot: {
+              schoolName: identity.schoolName,
+              shortName: identity.shortName,
+              monogram: identity.monogram,
+              cycleSubtitle: identity.cycleSubtitle,
+              ministry: identity.ministry,
+              regionalDirectorate: identity.regionalDirectorate,
+              inspection: identity.inspection,
+              republicName: identity.republicName,
+              republicMotto: identity.republicMotto,
+              schoolMotto: identity.schoolMotto,
+              address: identity.address,
+              logoUrl: identity.logoUrl,
+              logoVersionId: identity.logoVersionId,
+              identityVersion: identity.version,
+            },
             allocations: { create: parsed.data.allocations },
           },
           include: { student: { include: { person: true } }, allocations: true },

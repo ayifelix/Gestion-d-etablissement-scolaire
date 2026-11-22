@@ -8,7 +8,8 @@
     "start": "node dist/main.js",
     "test": "tsx --test test/*.test.ts",
     "db:migrate": "prisma migrate dev",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "brand:build": "node scripts/process-brand-assets.mjs"
   },
   "dependencies": {
     "@prisma/client": "^6.16.2",
@@ -20,6 +21,7 @@
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.0.2",
+    "sharp": "^0.35.5",
     "xlsx": "^0.18.5",
     "zod": "^4.1.11"
   },

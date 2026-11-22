@@ -4,7 +4,8 @@ import path from "node:path";
 import { Router, type Request, type RequestHandler } from "express";
 import rateLimit from "express-rate-limit";
 import multer from "multer";
-import { PersonRole, PrismaClient, ScopeType } from "@prisma/client";
+import { PersonRole, Prisma, PrismaClient, SchoolIdentity, ScopeType } from "@prisma/client";
+import sharp from "sharp";
 import { z } from "zod";
 
 type AuthContext = {
@@ -37,10 +38,13 @@ const imageUpload = multer({
 
 const identitySchema = z.object({
   schoolName: z.string().trim().min(2).max(160).optional(),
+  shortName: z.string().trim().min(1).max(80).optional(),
+  monogram: z.string().trim().min(1).max(8).optional(),
   cycleSubtitle: z.string().trim().min(2).max(120).optional(),
   ministry: z.string().trim().max(180).optional(),
   regionalDirectorate: z.string().trim().max(120).optional(),
   inspection: z.string().trim().max(120).optional(),
+  republicName: z.string().trim().max(120).optional(),
   republicMotto: z.string().trim().max(120).optional(),
   schoolMotto: z.string().trim().max(120).optional(),
   address: z.string().trim().max(500).optional(),
@@ -124,6 +128,54 @@ export function createSiteRouter(deps: SiteDependencies) {
     next();
   };
 
+  const manageIdentity: RequestHandler = async (req, res, next) => {
+    const now = new Date();
+    const granted = await prisma.userRole.findFirst({
+      where: {
+        userId: currentAuth(req).sub,
+        scopeType: ScopeType.ETABLISSEMENT,
+        scopeId: null,
+        dateStart: { lte: now },
+        OR: [{ dateEnd: null }, { dateEnd: { gte: now } }],
+        role: {
+          code: PersonRole.DIR,
+          permissions: {
+            some: { permission: { code: "etablissement.gerer_identite" } },
+          },
+        },
+      },
+    });
+    if (!granted) return res.status(403).json({ error: "Permission etablissement.gerer_identite requise" });
+    next();
+  };
+
+  const identitySnapshot = (identity: SchoolIdentity): Prisma.InputJsonObject => ({
+    schoolName: identity.schoolName,
+    shortName: identity.shortName,
+    monogram: identity.monogram,
+    cycleSubtitle: identity.cycleSubtitle,
+    ministry: identity.ministry,
+    regionalDirectorate: identity.regionalDirectorate,
+    inspection: identity.inspection,
+    republicName: identity.republicName,
+    republicMotto: identity.republicMotto,
+    schoolMotto: identity.schoolMotto,
+    address: identity.address,
+    phone: identity.phone,
+    email: identity.email,
+    secretariatHours: identity.secretariatHours,
+    headName: identity.headName,
+    headMessage: identity.headMessage,
+    collegePresentation: identity.collegePresentation,
+    lyceePresentation: identity.lyceePresentation,
+    directionsUrl: identity.directionsUrl,
+    logoUrl: identity.logoUrl,
+    compactLogoUrl: identity.compactLogoUrl,
+    logoVersionId: identity.logoVersionId,
+    photoUrl: identity.photoUrl,
+    version: identity.version,
+  });
+
   async function getIdentity() {
     return prisma.schoolIdentity.findUnique({ where: { id: "school" } });
   }
@@ -147,10 +199,13 @@ export function createSiteRouter(deps: SiteDependencies) {
     res.json({
       identity: {
         schoolName: identity.schoolName,
+        shortName: identity.shortName,
+        monogram: identity.monogram,
         cycleSubtitle: identity.cycleSubtitle,
         ministry: identity.ministry,
         regionalDirectorate: identity.regionalDirectorate,
         inspection: identity.inspection,
+        republicName: identity.republicName,
         republicMotto: identity.republicMotto,
         schoolMotto: identity.schoolMotto,
         address: identity.address,
@@ -180,16 +235,27 @@ export function createSiteRouter(deps: SiteDependencies) {
       where: { OR: [{ receiptNumber: code }, { qrToken: code }] },
       select: { receiptNumber: true, reversal: { select: { id: true } } },
     });
+    if (payment) {
+      return res.json({
+        status: payment.reversal ? "ANNULE" : "AUTHENTIQUE",
+        type: "RECU",
+        reference: payment.receiptNumber,
+      });
+    }
+    const document = await prisma.officialDocument.findFirst({
+      where: { OR: [{ number: code }, { verificationToken: code }] },
+      select: { number: true, type: true, revokedAt: true },
+    });
     res.json({
-      status: !payment ? "INTROUVABLE" : payment.reversal ? "ANNULE" : "AUTHENTIQUE",
-      type: payment ? "RECU" : null,
-      reference: payment?.receiptNumber ?? null,
+      status: !document ? "INTROUVABLE" : document.revokedAt ? "ANNULE" : "AUTHENTIQUE",
+      type: document?.type ?? null,
+      reference: document?.number ?? null,
     });
   });
 
   router.get("/public/media/:filename", async (req, res) => {
     const filename = String(req.params.filename);
-    if (!/^[0-9a-f-]{36}\.(png|jpg|webp)$/.test(filename)) {
+    if (!/^[0-9a-f-]{36}(?:-original|-(?:64|128|256|512|1024))?\.(png|jpg|webp)$/.test(filename)) {
       return res.status(404).json({ error: "Image introuvable" });
     }
     res.sendFile(path.join(mediaDirectory, filename), (error) => {
@@ -209,15 +275,43 @@ export function createSiteRouter(deps: SiteDependencies) {
     res.json({ identity, announcements });
   });
 
-  router.put("/site-content/identity", authenticate, manageContent, async (req, res) => {
+  router.get("/school-identity", authenticate, manageIdentity, async (_req, res) => {
+    const identity = await getIdentity();
+    if (!identity) return res.status(503).json({ error: "Identité de l'établissement non initialisée" });
+    res.json(identity);
+  });
+
+  router.get("/school-identity/versions", authenticate, manageIdentity, async (_req, res) => {
+    const identity = await getIdentity();
+    if (!identity) return res.status(503).json({ error: "Identité de l'établissement non initialisée" });
+    const versions = await prisma.schoolIdentityVersion.findMany({
+      where: { schoolIdentityId: identity.id },
+      orderBy: { version: "desc" },
+      select: { id: true, version: true, createdAt: true, createdBy: true },
+    });
+    res.json(versions);
+  });
+
+  router.put("/site-content/identity", authenticate, manageIdentity, async (req, res) => {
     const parsed = identitySchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: z.prettifyError(parsed.error) });
     const userId = currentAuth(req).sub;
     const previous = await getIdentity();
-    const identity = await prisma.schoolIdentity.upsert({
-      where: { id: "school" },
-      create: { id: "school", ...parsed.data, updatedBy: userId },
-      update: { ...parsed.data, updatedBy: userId },
+    const identity = await prisma.$transaction(async (transaction) => {
+      const saved = await transaction.schoolIdentity.upsert({
+        where: { id: "school" },
+        create: { id: "school", ...parsed.data, updatedBy: userId },
+        update: { ...parsed.data, version: { increment: 1 }, updatedBy: userId },
+      });
+      await transaction.schoolIdentityVersion.create({
+        data: {
+          schoolIdentityId: saved.id,
+          version: saved.version,
+          snapshot: identitySnapshot(saved),
+          createdBy: userId,
+        },
+      });
+      return saved;
     });
     await writeAudit({
       userId,
@@ -226,6 +320,50 @@ export function createSiteRouter(deps: SiteDependencies) {
       entityId: identity.id,
       oldValue: previous,
       newValue: parsed.data,
+      req,
+    });
+    res.json(identity);
+  });
+
+  router.post("/school-identity/versions/:id/restore", authenticate, manageIdentity, async (req, res) => {
+    const version = await prisma.schoolIdentityVersion.findUnique({ where: { id: String(req.params.id) } });
+    if (!version) return res.status(404).json({ error: "Version d'identité introuvable" });
+    const parsed = identitySchema.safeParse(version.snapshot);
+    const mediaSnapshot = z.object({
+      logoUrl: z.string().nullable().optional(),
+      compactLogoUrl: z.string().nullable().optional(),
+      logoVersionId: z.string().nullable().optional(),
+      photoUrl: z.string().nullable().optional(),
+    }).safeParse(version.snapshot);
+    if (!parsed.success || !mediaSnapshot.success) {
+      return res.status(409).json({ error: "Cette version ne peut pas être restaurée" });
+    }
+    const userId = currentAuth(req).sub;
+    const previous = await getIdentity();
+    if (!previous) return res.status(503).json({ error: "Identité de l'établissement non initialisée" });
+    const identity = await prisma.$transaction(async (transaction) => {
+      const restored = await transaction.schoolIdentity.update({
+        where: { id: previous.id },
+        data: { ...parsed.data, ...mediaSnapshot.data, version: { increment: 1 }, updatedBy: userId },
+      });
+      await transaction.schoolIdentityVersion.create({
+        data: {
+          schoolIdentityId: restored.id,
+          version: restored.version,
+          snapshot: identitySnapshot(restored),
+          createdBy: userId,
+        },
+      });
+      return restored;
+    });
+    await writeAudit({
+      userId,
+      action: "SCHOOL_IDENTITY_RESTORE",
+      entityType: "SCHOOL_IDENTITY",
+      entityId: identity.id,
+      oldValue: previous,
+      newValue: identity,
+      reason: `Restauration de la version ${version.version}`,
       req,
     });
     res.json(identity);
@@ -305,15 +443,15 @@ export function createSiteRouter(deps: SiteDependencies) {
     async (req, res) => {
       const file = req.file;
       const kind = req.body.kind;
-      if (!file || (kind !== "logo" && kind !== "photo")) {
-        return res.status(400).json({ error: "Image et type (logo ou photo) requis" });
+      if (!file || kind !== "photo") {
+        return res.status(400).json({ error: "Une photo d'établissement est requise" });
       }
       const extension = imageExtension(file);
       if (!extension) return res.status(400).json({ error: "Formats acceptés : PNG, JPEG ou WebP valide" });
       const filename = `${randomUUID()}${extension}`;
       await mkdir(mediaDirectory, { recursive: true });
       await writeFile(path.join(mediaDirectory, filename), file.buffer, { flag: "wx" });
-      const field = kind === "logo" ? "logoUrl" : "photoUrl";
+      const field = "photoUrl";
       const url = `/api/public/media/${filename}`;
       const userId = currentAuth(req).sub;
       const previous = await getIdentity();
@@ -332,6 +470,74 @@ export function createSiteRouter(deps: SiteDependencies) {
         req,
       });
       res.status(201).json({ kind, url });
+    },
+  );
+
+  router.post(
+    "/school-identity/logo",
+    authenticate,
+    manageIdentity,
+    (req, res, next) => imageUpload.single("image")(req, res, (error) => {
+      if (!error) return next();
+      const message = error instanceof multer.MulterError && error.code === "LIMIT_FILE_SIZE"
+        ? "Le logo dépasse la limite de 5 Mo"
+        : "Logo invalide";
+      res.status(400).json({ error: message });
+    }),
+    async (req, res) => {
+      const file = req.file;
+      if (!file) return res.status(400).json({ error: "Un logo est requis" });
+      const extension = imageExtension(file);
+      if (!extension) return res.status(400).json({ error: "Formats acceptés : PNG, JPEG ou WebP valide" });
+      const image = sharp(file.buffer, { failOn: "error" });
+      const metadata = await image.metadata();
+      if ((metadata.width ?? 0) < 600) {
+        return res.status(400).json({ error: "Le logo doit mesurer au moins 600 pixels de large" });
+      }
+      const id = randomUUID();
+      await mkdir(mediaDirectory, { recursive: true });
+      await writeFile(path.join(mediaDirectory, `${id}-original${extension}`), file.buffer, { flag: "wx" });
+      for (const width of [64, 128, 256, 512, 1024]) {
+        const output = image.clone().resize({ width, fit: "inside" });
+        await Promise.all([
+          output.clone().webp({ quality: 82, effort: 5 }).toFile(path.join(mediaDirectory, `${id}-${width}.webp`)),
+          output.clone().png({ compressionLevel: 9 }).toFile(path.join(mediaDirectory, `${id}-${width}.png`)),
+        ]);
+      }
+      const userId = currentAuth(req).sub;
+      const previous = await getIdentity();
+      if (!previous) return res.status(503).json({ error: "Identité de l'établissement non initialisée" });
+      const url = `/api/public/media/${id}-128.webp`;
+      const identity = await prisma.$transaction(async (transaction) => {
+        const saved = await transaction.schoolIdentity.update({
+          where: { id: previous.id },
+          data: {
+            logoUrl: url,
+            logoVersionId: id,
+            version: { increment: 1 },
+            updatedBy: userId,
+          },
+        });
+        await transaction.schoolIdentityVersion.create({
+          data: {
+            schoolIdentityId: saved.id,
+            version: saved.version,
+            snapshot: identitySnapshot(saved),
+            createdBy: userId,
+          },
+        });
+        return saved;
+      });
+      await writeAudit({
+        userId,
+        action: "SCHOOL_IDENTITY_LOGO_UPDATE",
+        entityType: "SCHOOL_IDENTITY",
+        entityId: identity.id,
+        oldValue: { logoUrl: previous.logoUrl, logoVersionId: previous.logoVersionId },
+        newValue: { logoUrl: url, logoVersionId: id },
+        req,
+      });
+      res.status(201).json({ url, version: identity.version, logoVersionId: id });
     },
   );
 
