@@ -39,7 +39,20 @@ function chooseInitialTab(roles: string[]) {
 }
 
 function Login({ onLogin }: { onLogin: (roles: string[]) => void }) {
-  const [identity, setIdentity] = useState<PublicIdentity | null>(null);
+  const [identity, setIdentity] = useState<PublicIdentity>({
+    schoolName: "LYCÉE AKONDA GNAWEME",
+    shortName: "Akonda",
+    monogram: "AG",
+    cycleSubtitle: "Collège et Lycée",
+    ministry: "Ministère des Enseignements Primaire et Secondaire (MEPS)",
+    regionalDirectorate: "DRE-Maritime",
+    inspection: "IESG-Vogan",
+    republicName: "République Togolaise",
+    republicMotto: "Travail - Liberté - Patrie",
+    phone: "",
+    email: "",
+    logoUrl: "/assets/etablissement/logo-128.webp",
+  });
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [otp, setOtp] = useState("");
@@ -55,9 +68,7 @@ function Login({ onLogin }: { onLogin: (roles: string[]) => void }) {
         try {
           const cached = JSON.parse(localStorage.getItem("public-site-cache-v1") ?? "null");
           if (active && cached?.site?.identity) setIdentity(cached.site.identity as PublicIdentity);
-        } catch {
-          if (active) setIdentity(null);
-        }
+        } catch {}
       });
     return () => { active = false; };
   }, []);
@@ -85,7 +96,7 @@ function Login({ onLogin }: { onLogin: (roles: string[]) => void }) {
     }
   };
 
-  const logo = schoolLogoSource(identity?.logoUrl);
+  const logo = schoolLogoSource(identity?.logoUrl) ?? "/assets/etablissement/logo-128.webp";
 
   return (
     <main className="login-page">

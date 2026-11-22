@@ -52,6 +52,29 @@ type InstallPromptEvent = Event & {
 };
 
 const publicSiteCacheKey = "public-site-cache-v1";
+const fallbackIdentity: SchoolIdentity = {
+  schoolName: "LYCÉE AKONDA GNAWEME",
+  shortName: "Akonda",
+  monogram: "AG",
+  cycleSubtitle: "Collège et Lycée",
+  ministry: "Ministère des Enseignements Primaire et Secondaire (MEPS)",
+  regionalDirectorate: "DRE-Maritime",
+  inspection: "IESG-Vogan",
+  republicName: "République Togolaise",
+  republicMotto: "Travail - Liberté - Patrie",
+  schoolMotto: "Discipline - Travail - Succès",
+  address: "",
+  phone: "",
+  email: "",
+  secretariatHours: "",
+  headName: "",
+  headMessage: "",
+  collegePresentation: "",
+  lyceePresentation: "",
+  directionsUrl: "",
+  logoUrl: "/assets/etablissement/logo-128.webp",
+  photoUrl: null,
+};
 
 function readCachedSite(): PublicSite | null {
   try {
@@ -213,8 +236,8 @@ export function HomePage({ onLogin }: { onLogin: () => void }) {
     }
   };
 
-  const identity = site?.identity;
-  const logo = schoolLogoSource(identity?.logoUrl);
+  const identity = site?.identity ?? fallbackIdentity;
+  const logo = schoolLogoSource(identity?.logoUrl) ?? "/assets/etablissement/logo-128.webp";
   const photo = safeMediaUrl(identity?.photoUrl ?? null);
   const directions = safeDirectionsUrl(identity?.directionsUrl ?? "");
 
