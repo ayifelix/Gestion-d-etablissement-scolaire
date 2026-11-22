@@ -1,4 +1,7 @@
 :root {
+  --motion-enter: 650ms cubic-bezier(.16,1,.3,1);
+  --motion-switch: 260ms cubic-bezier(.65,0,.35,1);
+  --motion-fast: 180ms cubic-bezier(.16,1,.3,1);
   font-family: "Atkinson Hyperlegible", "Segoe UI", sans-serif;
   color: #1c1b18;
   background: #fbf6ea;
@@ -12,6 +15,19 @@
   --ink: #1c1b18;
   --line: #d6cdb9;
 }
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+}
+html[data-reduce-motion="true"] *{animation:none!important;transition:none!important}
+.login-panel{animation:login-enter var(--motion-enter) both}
+.login-header{animation:header-in 400ms cubic-bezier(.16,1,.3,1) both}
+.login-error{animation:soft-shake 260ms cubic-bezier(.65,0,.35,1) both}
+.shell main section{animation:workspace-enter var(--motion-switch) both}
+.shell main section:nth-of-type(n+8){animation-duration:0ms}
+@keyframes login-enter{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+@keyframes header-in{from{opacity:0}to{opacity:1}}
+@keyframes soft-shake{25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
+@media (prefers-reduced-motion:reduce){.login-error{animation:none!important}}
 * { box-sizing: border-box; }
 body { margin: 0; }
 button, input { font: inherit; }
@@ -222,7 +238,6 @@ h2 small { background: #e8eaf0; color: var(--indigo); border-radius: 20px; paddi
   .school-logo, .official-school-logo, .reduced-letterhead > img, .togo-arms { background: #fbf6ea; }
 }
 @media (prefers-reduced-motion: no-preference) {
-  button { transition: background-color 180ms ease, transform 180ms ease; }
   button:hover { transform: translateY(-1px); }
 }
 @media (max-width: 760px) {

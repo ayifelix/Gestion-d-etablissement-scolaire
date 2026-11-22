@@ -32,6 +32,15 @@
 - Le logo du lycée est conservé dans son original non modifié avec son empreinte SHA-256. Ses dérivés sont générés, jamais recolorés ni déformés. Un nouveau logo accepté par la direction doit avoir au moins 600 px de large et produit des versions 64/128/256/512/1024 px.
 - Les documents déjà émis sont figés avec l'identité et la version du logo utilisées à leur émission. Tout document issu des données fictives porte automatiquement « SPÉCIMEN - DONNÉES FICTIVES ».
 
+## Système d'animation
+
+- Interface : uniquement `transform` et `opacity`; aucune animation de largeur, hauteur, position, marge ou ombre.
+- Durées : 150–400 ms pour les interactions, jusqu'à 900 ms pour l'ouverture unique de l'accueil ou de la connexion.
+- Courbes : entrée `cubic-bezier(.16,1,.3,1)`, transition `cubic-bezier(.65,0,.35,1)`.
+- `prefers-reduced-motion` désactive tout mouvement. Le bouton « Réduire les animations » mémorise le choix dans `localStorage`.
+- Les notes, moyennes et montants ne sont jamais comptés ou animés. Les animations décoratives restent en pause hors écran.
+- Budget JavaScript d'animation : 25 Ko gzip; privilégier CSS, IntersectionObserver et View Transitions.
+
 ## Accueil public et sécurité
 
 - La page `/` est publique ; `/connexion` mène à l'espace défini par les rôles actifs après authentification.
